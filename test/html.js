@@ -1,7 +1,6 @@
-const { parseFile, createProcessor } = require("../markright");
+const { parseFile, print, createProcessor } = require("../markright");
 const mr = parseFile("html.mr");
-const H = createProcessor();
-
+// print(mr);
 // console.dir(mr, { depth: null });
 
 class Writer {
@@ -35,29 +34,27 @@ class Writer {
   }
 }
 
-const out = new Writer(process.stdout);
+const html = createProcessor();
 
-H.cmd("<line>", ({ content }) => {
-  content();
-  out.endl();
-});
+html.line(({ content }) => content().join(""));
+html.markright(({ content }) => [].concat(...content()));
 
-H.cmd("<text>", ({ content }) => {
-  out.write(content());
-})
-
-const tag = (cmd) => ({ content, args, type }) => {
-  out.writeln(`<${cmd}${args ? " " + args.join(" ") : ""}>`);
-  out.indented(content);
-  out.writeln(`</${cmd}>`);
+const tag = ({ cmd: { name, args }, content }) => {
+  let c = content();
+  if (!Array.isArray(c)) c = [c];
+  return [
+    `<${name}${args ? " " + args.join(" ") : ""}>`,
+    ...c.map((line) => "  " + line),
+    `</${name}>`,
+  ];
 };
 
-H.cmd('*', tag);
+const inlineTag = ({ cmd: { name, args }, content }) =>
+  `<${name}${args ? " " + args.join(" ") : ""}>${content()}</${name}>`;
 
-H.cmd("em", ({ content, type }) => {
-  out.write(`<em ${type}>`);
-  content();
-  out.write(`</em>`);
-})
+html.cmd("*", tag);
+html.cmdList(["em", "li", "h1"], inlineTag);
+html.cmd("", () => "<br>");
 
-H.process(mr);
+const lines = html.process(mr);
+lines.forEach((line) => process.stdout.write(line + "\n"));

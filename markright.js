@@ -5,6 +5,7 @@ const rEmpty = /^[ \t]*$/;
 const rIndent = /^( )*/;
 const rCommandHeader = /@([a-zA-Z0-9_-]*)(\(([^),]+(,[^),]+)*)*\))?/;
 const rBlockCommand = /^@([a-zA-Z0-9_-]*)(\([^),]+(,[^),]+)*\))?\s*$/;
+const rInternal = /^<.*>$/;
 
 // Utils
 const isEmpty = (line) => rEmpty.test(line);
@@ -254,11 +255,12 @@ class Logger {
 
 class Processor {
   constructor() {
+    const defaultFunc = ({ content }) => content();
     this.funcTable = [
-      {
-        path: "*",
-        fn: ({ content }) => content(), // Default implementation
-      },
+      { path: "<markright>", fn: defaultFunc },
+      { path: "<paragraph>", fn: defaultFunc },
+      { path: "<line>", fn: defaultFunc },
+      { path: "<text>", fn: defaultFunc },
     ];
   }
 
@@ -267,9 +269,9 @@ class Processor {
   }
   resolve(path) {
     const last = path[path.length - 1];
-    for (let i = this.funcTable.length-1; i >= 0; i--) {
+    for (let i = this.funcTable.length - 1; i >= 0; i--) {
       const { path: tablePath, fn } = this.funcTable[i];
-      if (tablePath === last || tablePath === "*") {
+      if (tablePath === last || (tablePath === "*" && !rInternal.test(last))) {
         return fn;
       }
     }
@@ -288,12 +290,13 @@ class Processor {
   text(fn) {
     this._on("<text>", fn);
   }
+
   cmd(path, fn) {
     this._on(path, fn);
   }
   cmdList(pathList, fn) {
     pathList.forEach((path) => {
-      this._on(path, fn(path));
+      this._on(path, fn);
     });
   }
 
@@ -309,8 +312,7 @@ class Processor {
       if (func) {
         return func({
           path: path,
-          args: mr.args,
-          type: mr.type,
+          cmd: mr instanceof Command ? mr : null,
           content: walkContent(path, mr),
         });
       }
