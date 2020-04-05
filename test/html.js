@@ -6,15 +6,11 @@ const html = createProcessor();
 html.line(({ content }) => content().join(""));
 html.markright(({ content }) => [].concat(...content()));
 
-const tag = ({ cmd: { name, args }, content }) => {
-  let c = content();
-  if (!Array.isArray(c)) c = [c];
-  return [
-    `<${name}${args ? " " + args.join(" ") : ""}>`,
-    ...c.map((line) => "  " + line),
-    `</${name}>`,
-  ];
-};
+const tag = ({ cmd: { name, args }, content }) => [
+  `<${name}${args ? " " + args.join(" ") : ""}>`,
+  ...content().map((line) => "  " + line),
+  `</${name}>`,
+];
 
 const inlineTag = ({ cmd: { name, args }, content }) =>
   `<${name}${args ? " " + args.join(" ") : ""}>${content()}</${name}>`;
