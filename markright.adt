@@ -1,0 +1,9 @@
+Markright = List(Paragraph | Command(Markright))
+Paragraph = List(Line      | Command(Paragraph))
+Line      = List(String    | Command(Line))
+
+Command(T) = {
+  name: String
+  args: List(String)
+  content: T
+}

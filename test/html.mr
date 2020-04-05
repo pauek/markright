@@ -1,0 +1,11 @@
+@html
+  @head
+    This is da head @em{blue} yay
+  @body
+    body!
+    @ul
+      @li(special="a",display="none"){Yay here}
+      @li(a="2"){Due 2 dos}
+      @li{Trei tres three}
+        
+      
