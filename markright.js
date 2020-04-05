@@ -13,8 +13,7 @@ const indentation = (line) => line.match(rIndent)[0].length;
 const isSingleCommand = (line) => rBlockCommand.test(line);
 
 // These are matching tables...
-const OPEN_DELIMS = "[{<";
-const CLOSE_DELIMS = "]}>";
+const OPEN_DELIMS = "[{<", CLOSE_DELIMS = "]}>";
 const getCloseDelim = (c) => CLOSE_DELIMS[OPEN_DELIMS.indexOf(c)];
 
 const getDelimiters = (line) => {
