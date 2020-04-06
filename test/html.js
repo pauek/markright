@@ -15,11 +15,13 @@ const tag = ({ cmd: { name, args }, content }) => {
   ];
 };
 
-const inlineTag = ({ cmd: { name, args }, content }) =>
+const inlineTagHandler = ({ cmd: { name, args }, content }) =>
   `<${name}${args ? " " + args.join(" ") : ""}>${[...content]}</${name}>`;
 
+const inlineTagList = ["em", "strong", "li", "h1"];
+
 html.cmd("*", tag);
-html.cmdList(["em", "li", "h1", "strong"], inlineTag);
+html.cmdList(inlineTagList, inlineTagHandler);
 html.cmd("", () => "<br>");
 
 const lines = html.process(mr);
