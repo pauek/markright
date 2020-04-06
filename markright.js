@@ -13,7 +13,8 @@ const indentation = (line) => line.match(rIndent)[0].length;
 const isSingleCommand = (line) => rBlockCommand.test(line);
 
 // These are matching tables...
-const OPEN_DELIMS = "[{<", CLOSE_DELIMS = "]}>";
+const OPEN_DELIMS = "[{<",
+  CLOSE_DELIMS = "]}>";
 const getCloseDelim = (c) => CLOSE_DELIMS[OPEN_DELIMS.indexOf(c)];
 
 const getDelimiters = (line) => {
@@ -254,12 +255,12 @@ class Logger {
 
 class Processor {
   constructor() {
-    const defaultFunc = ({ content }) => content();
+    const defaultFn = ({ content }) => [...content];
     this.funcTable = [
-      { path: "<markright>", fn: defaultFunc },
-      { path: "<paragraph>", fn: defaultFunc },
-      { path: "<line>", fn: defaultFunc },
-      { path: "<text>", fn: defaultFunc },
+      { path: "<markright>", fn: defaultFn },
+      { path: "<paragraph>", fn: defaultFn },
+      { path: "<line>", fn: defaultFn },
+      { path: "<text>", fn: ({ content }) => content },
     ];
   }
 
@@ -300,19 +301,25 @@ class Processor {
   }
 
   process(root) {
-    const _walkContent = (path, mr) => () =>
-      Array.isArray(mr.content)
-        ? mr.content.map((x) => _walk(path, x))
-        : _walk(path, mr.content);
+    const _contentGenerator = (path, mr) =>
+      function* () {
+        if (Array.isArray(mr.content)) {
+          for (let child of mr.content) {
+            yield _walk(path, child);
+          }
+        } else {
+          yield _walk(path, mr.content);
+        }
+      };
 
-    const _resolve = (mr, parentPath, name, walkContent) => {
+    const _resolve = (mr, parentPath, name, contentGenerator) => {
       const path = [...parentPath, name];
       const func = this.resolve(path);
       if (func) {
         return func({
           path: path,
           cmd: mr instanceof Command ? mr : null,
-          content: walkContent(path, mr),
+          content: contentGenerator(path, mr)(),
         });
       }
       throw new Error(`Func not found for ${path}!`);
@@ -324,15 +331,15 @@ class Processor {
       }
       switch (mr.constructor) {
         case Markright:
-          return _resolve(mr, path, "<markright>", _walkContent);
+          return _resolve(mr, path, "<markright>", _contentGenerator);
         case Paragraph:
-          return _resolve(mr, path, "<paragraph>", _walkContent);
+          return _resolve(mr, path, "<paragraph>", _contentGenerator);
         case Line:
-          return _resolve(mr, path, "<line>", _walkContent);
+          return _resolve(mr, path, "<line>", _contentGenerator);
         case String:
           return _resolve(mr, path, "<text>", () => () => mr);
         case Command:
-          return _resolve(mr, path, mr.name, _walkContent);
+          return _resolve(mr, path, mr.name, _contentGenerator);
         default:
           throw new Error(`Unexpected ${mr.constructor.name} (${mr})`);
       }

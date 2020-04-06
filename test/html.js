@@ -3,20 +3,23 @@ const mr = parseFile("html.mr");
 
 const html = createProcessor();
 
-html.line(({ content }) => content().join(""));
-html.markright(({ content }) => [].concat(...content()));
+html.line(({ content }) => [...content].join(""));
+html.markright(({ content }) => [].concat(...[...content]));
 
-const tag = ({ cmd: { name, args }, content }) => [
-  `<${name}${args ? " " + args.join(" ") : ""}>`,
-  ...content().map((line) => "  " + line),
-  `</${name}>`,
-];
+const tag = ({ cmd: { name, args }, content }) => {
+  const children = content.next().value;
+  return [
+    `<${name}${args ? " " + args.join(" ") : ""}>`,
+    ...children.map((line) => "  " + line),
+    `</${name}>`,
+  ];
+};
 
 const inlineTag = ({ cmd: { name, args }, content }) =>
-  `<${name}${args ? " " + args.join(" ") : ""}>${content()}</${name}>`;
+  `<${name}${args ? " " + args.join(" ") : ""}>${[...content]}</${name}>`;
 
 html.cmd("*", tag);
-html.cmdList(["em", "li", "h1"], inlineTag);
+html.cmdList(["em", "li", "h1", "strong"], inlineTag);
 html.cmd("", () => "<br>");
 
 const lines = html.process(mr);
