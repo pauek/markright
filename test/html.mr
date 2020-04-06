@@ -15,5 +15,5 @@
       a @ b
       c @ d
       
-    @h1
-      Hola que tal @strong<asdf>
+    @h1{Hola que tal @strong<asdf>}
+

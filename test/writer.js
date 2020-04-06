@@ -28,3 +28,5 @@ class Writer {
     this.endl();
   }
 }
+
+module.exports = Writer;
