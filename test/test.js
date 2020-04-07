@@ -7,7 +7,7 @@ class LineWriter {
     this.indentation = 0;
   }
   endl() {
-    this.lines.push(this.currLine);
+    this.lines.push(this.currLine ? this.currLine : "");
     this.currLine = null;
   }
   indented(fn) {
@@ -27,14 +27,17 @@ class LineWriter {
   }
 }
 
-const equalStringArrays = (A, B) => {
+const isCommand = (elem, name) =>
+  elem instanceof markright.Command && elem.name === name;
+
+const compareLineArrays = (A, B) => {
   const maxLen = Math.max(A.length, B.length);
   for (let i = 0; i < maxLen; i++) {
     if (i >= A.length) {
-      return `<nothing> !== "${B[i]}"`;
+      return `  <nothing> !== "${B[i]}"\n`;
     }
     if (i >= B.length) {
-      return `<nothing> !== "${B[i]}"`;
+      return `  <nothing> !== "${B[i]}"\n`;
     }
     if (A[i] !== B[i]) {
       return `  Mismatch at line ${i}:\n    "${A[i]}"\n    "${B[i]}"\n`;
@@ -71,25 +74,64 @@ const printAst = (root) => {
   return out.lines;
 };
 
+// Tests
+
+const errors = [];
+
+const checkTestArgs = (cmd) => {
+  if (!Array.isArray(cmd.args) || cmd.args.length !== 1) {
+    throw new Error(
+      `@text should have a single argument (the name of the test)`
+    );
+  }
+}
+
 const performTest = (input, modelOutput) => {
   const mr = markright.parse(input);
   const output = printAst(mr);
-  return equalStringArrays(output, modelOutput);
+  return compareLineArrays(output, modelOutput);
+};
+
+const addResult = (name, fn) => {
+  const errorMessage = fn();
+  if (errorMessage) {
+    process.stdout.write("x");
+    errors.push({ name, msg: errorMessage });
+  } else {
+    process.stdout.write(".");
+  }
+};
+
+const showErrors = () => {
+  errors.forEach((e) => {
+    process.stderr.write(`\nFailed test "${e.name}":\n`);
+    process.stderr.write(e.msg);
+  });
 };
 
 const testFuncMap = new markright.FuncMap();
 
-const isCommand = (elem, name) =>
-  elem instanceof markright.Command && elem.name === name;
+testFuncMap.on("/<markright>", (mr, walk) => {
+  mr.content.forEach(walk);
+  process.stdout.write('\n');
+})
 
-const errors = [];
+testFuncMap.on("print-test*", (cmd) => {
+  checkTestArgs(cmd);
+  const { args: [name] } = cmd;
+  const mr = markright.parse(cmd.content);
+  const lineWriter = new LineWriter();
+  markright.print(mr, lineWriter);
+  addResult(name, () => compareLineArrays(lineWriter.lines, cmd.content));
+});
 
-testFuncMap.on("test", (cmd) => {
+testFuncMap.on("parse-test", (cmd) => {
+  checkTestArgs(cmd);
   let input, output;
-  if (!Array.isArray(cmd.args) || cmd.args.length !== 1) {
-    throw new Error(`@text should have a single argument (the name of the test)`);
-  }
-  const { args: [name], content: mr } = cmd;
+  const {
+    args: [name],
+    content: mr,
+  } = cmd;
   for (let elem of mr.content) {
     if (isCommand(elem, "input*")) {
       input = elem.content;
@@ -102,20 +144,9 @@ testFuncMap.on("test", (cmd) => {
     }
   }
 
-  const errorMessage = performTest(input, output);
-  if (errorMessage) {
-    process.stdout.write("x");
-    errors.push({ name, msg: errorMessage });
-  } else {
-    process.stdout.write(".");
-  }
+  addResult(name, () => performTest(input, output));
 });
 
 const tests = markright.parseFile("tests.mr");
 markright.walk(tests, testFuncMap);
-process.stdout.write("\n");
-
-errors.forEach((e) => {
-  process.stderr.write(`\nFailed test "${e.name}":\n`);
-  process.stderr.write(e.msg);
-});
+showErrors();

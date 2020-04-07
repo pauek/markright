@@ -1,4 +1,46 @@
-@test(First)
+@print-test*(1)
+  @a{hola @d<que @e[x] @ hi ho> tal} fiu fiu
+  hola que tal @a{} @b @c(1, 2, 3)<<ddd>>
+
+  @B(a,b,c)
+    line1 @
+    line2
+    line3
+
+    skdj
+      asdfasdf
+
+    @C(bla,bli,blo)
+      23874
+      2834782734
+      827482734
+
+    @d @e @f
+
+  Esse veniam magna in aute aute. Est officia labore culpa esse adipisicing
+  excepteur sunt officia deserunt sint amet sit sit ex. Mollit sit est sint duis.
+  Ut consectetur dolore incididunt do aute proident deserunt laboris aute amet.
+  Cupidatat labore sint incididunt labore occaecat reprehenderit proident aliqua.
+
+  blis blias blus
+  @xxx
+    a
+    b
+    c
+  jor jor
+
+  @a{2} @b{{3}} @c{{{asdf}}} bli sblis
+  @command
+    fip 
+    fliap
+    @someother
+      blis blia
+      @blis-blis
+        blis blis
+        hola
+    xxx
+  more text
+@parse-test(First)
   @input*
     @a @b @c
   @output*
@@ -10,7 +52,7 @@
           Cmd(b)
           " "
           Cmd(c)
-@test(Inline command)
+@parse-test(Inline command)
   @input*
     a @b c
   @output*
@@ -20,7 +62,7 @@
           "a "
           Cmd(b)
           " c"
-@test(Block command)
+@parse-test(Block command)
   @input*
     @cmd(a, b, c)
       text content
@@ -31,7 +73,7 @@
           Paragraph
             Line
               "text content"
-@test(A paragraph)
+@parse-test(A paragraph)
   @input*
     a @b c
     @d{e} @f(g)

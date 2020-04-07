@@ -318,7 +318,7 @@ const walk = (root, funcMap) => {
 // Printer
 
 class Printer {
-  constructor(wstream) {
+  constructor(wstream = process.stdout) {
     this.wstream = wstream;
     this.indentation = 0;
     this.lineStart = true;
@@ -341,8 +341,7 @@ class Printer {
   }
 }
 
-const print = (root, writeStream = process.stdout) => {
-  const out = new Printer(writeStream);
+const print = (root, out = new Printer()) => {
   const pr = new FuncMap();
 
   pr.on("<markright>", (M, process) => {
