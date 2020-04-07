@@ -1,13 +1,14 @@
 # AST
 ```
-Markright = List<Paragraph | Command>
-Paragraph = List<Line>
-Command = {
+Markright = List(Paragraph | Command(Markright))
+Paragraph = List(Line      | Command(Paragraph))
+Line      = List(String    | Command(Line))
+
+Command(T) = {
   name: String
-  args: List<String>
-  content: List<Line>
+  args: List(String)
+  content: T
 }
-Line = List<String | Command>
 ```
 
 # Solo hay un tipo de Command
