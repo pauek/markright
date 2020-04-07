@@ -1,13 +1,16 @@
 const fs = require("fs");
 
+
 // Regular Expressions
+
 const rEmpty = /^[ \t]*$/;
 const rIndent = /^( )*/;
 const rCommandHeader = /@([a-zA-Z0-9_-]*)(\(([^),]+(,[^),]+)*)*\))?/;
 const rBlockCommand = /^@([a-zA-Z0-9_-]*)(\([^),]+(,[^),]+)*\))?\s*$/;
-const rInternal = /^<.*>$/;
+
 
 // Utils
+
 const isEmpty = (line) => rEmpty.test(line);
 const indentation = (line) => line.match(rIndent)[0].length;
 const isSingleCommand = (line) => rBlockCommand.test(line);
@@ -52,22 +55,16 @@ class Paragraph {
   }
 }
 
-const CommandType = {
-  BLOCK: "block",
-  INPARAGRAPH: "inparagraph",
-  INLINE: "inline",
-};
+class Line {
+  constructor(items) {
+    this.content = items;
+  }
+}
 
 class Command {
   constructor(name, args) {
     this.name = name;
     if (args) this.args = args;
-  }
-  setType(type) {
-    this.type = type;
-  }
-  setContent(content) {
-    this.content = content;
   }
   isRaw() {
     return this.name[this.name.length - 1] == "*";
@@ -77,11 +74,10 @@ class Command {
   }
 }
 
-class Line {
-  constructor(items) {
-    this.content = items;
-  }
-}
+Command.BLOCK = "block";
+Command.INPARAGRAPH = "inparagraph";
+Command.INLINE = "inline";
+
 
 // Parser
 
@@ -138,9 +134,9 @@ const parse = (lines) => {
       const innerLines = collectLines(baseIndentation);
       if (paragraph) {
         // b.1) Inline command (open paragraph)
-        cmd.setType(CommandType.INPARAGRAPH);
+        cmd.type = Command.INPARAGRAPH;
         if (cmd.isRaw()) {
-          cmd.setContent(innerLines);
+          cmd.content = innerLines;
         } else {
           const mr = parse(innerLines);
           if (mr.content.length > 1) {
@@ -149,13 +145,13 @@ const parse = (lines) => {
               `An inparagraph command should have only one block`
             );
           }
-          cmd.setContent(mr);
+          cmd.content = mr;
         }
         paragraph.append(cmd);
       } else {
         // b.2) Block command (no paragraph)
-        cmd.setType(CommandType.BLOCK);
-        cmd.setContent(cmd.isRaw() ? innerLines : parse(innerLines));
+        cmd.type = Command.BLOCK;
+        cmd.content = cmd.isRaw() ? innerLines : parse(innerLines);
         blocks.push(cmd);
       }
       continue;
@@ -200,7 +196,7 @@ const parseLine = (line) => {
     // Command
     const { cmd, pos } = parseCommandHeader(line);
     line = line.slice(pos);
-    cmd.setType(CommandType.INLINE);
+    cmd.type = Command.INLINE;
 
     // Parse delimited text
     const delims = getDelimiters(line);
@@ -212,7 +208,7 @@ const parseLine = (line) => {
       if (end === -1) {
         throw new Error(`Open delimiter ${open.repeat(length)} not closed`);
       }
-      cmd.setContent(parseLine(line.slice(start, end)));
+      cmd.content = parseLine(line.slice(start, end));
       line = line.slice(end + length);
     }
 
@@ -284,7 +280,7 @@ const print = (mr, writeStream = process.stdout) => {
           P.write(`(${cmd.args.join(",")})`);
         }
         switch (cmd.type) {
-          case CommandType.INLINE: {
+          case Command.INLINE: {
             if (cmd.content) {
               P.write(`${cmd.openDelim}`);
               _print(cmd.content, true);
@@ -292,8 +288,8 @@ const print = (mr, writeStream = process.stdout) => {
             }
             break;
           }
-          case CommandType.INPARAGRAPH:
-          case CommandType.BLOCK: {
+          case Command.INPARAGRAPH:
+          case Command.BLOCK: {
             P.endl();
             P.indent(2);
             _print(cmd.content);
@@ -317,6 +313,7 @@ const print = (mr, writeStream = process.stdout) => {
 
 // Processor
 
+const rInternal = /^<.*>$/;
 const isInternal = (pathElem) => rInternal.test(pathElem);
 
 const parsePath = (str) => str.split("/");
@@ -329,7 +326,7 @@ const pathMatch = (modelPath, path) => {
       modelElem === elem
     );
   };
-  const minLength = Math.min(path.length, modelPath.length);
+  const minLength = Math.min(modelPath.length, path.length);
   for (let i = 0; i < minLength; i++) {
     const j = path.length - 1 - i;
     const mj = modelPath.length - 1 - i;
