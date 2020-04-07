@@ -37,7 +37,7 @@ const compareLineArrays = (A, B) => {
       return `  <nothing> !== "${B[i]}"\n`;
     }
     if (i >= B.length) {
-      return `  <nothing> !== "${B[i]}"\n`;
+      return `  "${A[i]}" !== <nothing>\n`;
     }
     if (A[i] !== B[i]) {
       return `  Mismatch at line ${i}:\n    "${A[i]}"\n    "${B[i]}"\n`;
@@ -65,8 +65,14 @@ const printAst = (root) => {
       out.write(`, [${cmd.args.map((a) => `"${a}"`).join(", ")}]`);
     }
     out.writeln(")");
-    if (cmd.content) {
-      out.indented(() => walk(cmd.content));
+    if (cmd.isRaw()) {
+      out.indented(() => {
+        cmd.content.forEach((line) => out.writeln(`"${line}"`));
+      });
+    } else {
+      if (cmd.content) {
+        out.indented(() => walk(cmd.content));
+      }
     }
   });
 

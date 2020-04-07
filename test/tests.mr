@@ -176,3 +176,28 @@
                       "new"
               " commands"
           " inside"
+@parse-test(Empty lines)
+  @input*
+
+    @something
+
+      Yay
+  @output*
+    Markright
+      Cmd(something)
+        Markright
+          Paragraph
+            Line
+              "Yay"
+@parse-test(Indentation in inner text)
+  @input*
+    @raw*
+      1st
+        2nd
+      3rd
+  @output*
+    Markright
+      Cmd(raw*)
+        "1st"
+        "  2nd"
+        "3rd"
