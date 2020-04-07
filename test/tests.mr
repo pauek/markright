@@ -1,0 +1,29 @@
+@test
+  @input*
+    @a @b @c
+  @output*
+    Markright
+      Paragraph
+        Line
+          Cmd(a)
+          " "
+          Cmd(b)
+          " "
+          Cmd(c)
+@test(A paragraph)
+  @input*
+    a @b c
+    @d{e} @f(g)
+  @output*
+    Markright
+      Paragraph
+        Line
+          "a "
+          Cmd(b)
+          " c"
+        Line
+          Cmd(d)
+            Line
+              "e"
+          " "
+          Cmd(f, ["g"])
