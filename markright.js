@@ -201,6 +201,11 @@ const parseLine = (line) => {
       const { open, close, length } = delims;
       cmd.openDelim = open.repeat(length);
       const start = length;
+      // FIXME: Here if we search for the closing delimiter, we get it wrong
+      //   with a string like `@A{b @c{d} e}`, because the closing brace of the
+      //   'A' command is the one after 'd'. If the command is not raw, we could
+      //   parse the line telling it to stop at the closing delimiter. If it is raw
+      //   we have to look for the first closing delimiter anyway.
       const end = line.indexOf(close.repeat(length));
       if (end === -1) {
         throw new Error(`Open delimiter ${open.repeat(length)} not closed`);
