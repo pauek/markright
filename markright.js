@@ -1,13 +1,11 @@
 const fs = require("fs");
 
-
 // Regular Expressions
 
 const rEmpty = /^[ \t]*$/;
 const rIndent = /^( )*/;
 const rCommandHeader = /@([a-zA-Z0-9_-]*)(\(([^),]+(,[^),]+)*)*\))?/;
 const rBlockCommand = /^@([a-zA-Z0-9_-]*)(\([^),]+(,[^),]+)*\))?\s*$/;
-
 
 // Utils
 
@@ -77,7 +75,6 @@ class Command {
 Command.BLOCK = "block";
 Command.INPARAGRAPH = "inparagraph";
 Command.INLINE = "inline";
-
 
 // Parser
 
@@ -223,94 +220,6 @@ const parseFile = (filename) => {
   return parse(lines);
 };
 
-// Printer
-
-class Printer {
-  constructor(wstream) {
-    this.wstream = wstream;
-    this.indentation = 0;
-    this.lineStart = true;
-  }
-  endl() {
-    this.wstream.write("\n");
-    this.lineStart = true;
-  }
-  indent(n) {
-    this.indentation += n;
-  }
-  write(x) {
-    if (this.lineStart) {
-      this.lineStart = false;
-      this.wstream.write(" ".repeat(this.indentation));
-    }
-    this.wstream.write(x);
-  }
-}
-
-const print = (mr, writeStream = process.stdout) => {
-  const P = new Printer(writeStream);
-
-  const _print = (mr) => {
-    if (mr === null || mr === undefined) {
-      return;
-    }
-    switch (mr.constructor) {
-      case Markright: {
-        mr.content.forEach((block, i) => {
-          if (i > 0) P.endl();
-          _print(block);
-        });
-        break;
-      }
-      case Line: {
-        mr.content.forEach(_print);
-        break;
-      }
-      case Paragraph: {
-        mr.content.forEach((item) => {
-          _print(item);
-          if (item instanceof Line) P.endl();
-        });
-        break;
-      }
-      case Command: {
-        const cmd = mr;
-        P.write(`@${cmd.name}`);
-        if (cmd.args) {
-          P.write(`(${cmd.args.join(",")})`);
-        }
-        switch (cmd.type) {
-          case Command.INLINE: {
-            if (cmd.content) {
-              P.write(`${cmd.openDelim}`);
-              _print(cmd.content, true);
-              P.write(`${cmd.closeDelim}`);
-            }
-            break;
-          }
-          case Command.INPARAGRAPH:
-          case Command.BLOCK: {
-            P.endl();
-            P.indent(2);
-            _print(cmd.content);
-            P.indent(-2);
-            break;
-          }
-        }
-        break;
-      }
-      case String: {
-        P.write(mr);
-        break;
-      }
-      default:
-        throw new Error(`Unexpected ${mr.constructor.name} (${mr})`);
-    }
-  };
-
-  _print(mr);
-};
-
 // Processor
 
 const rInternal = /^<.*>$/;
@@ -355,40 +264,40 @@ class FuncMap {
   }
 }
 
-const process = (root, funcMap) => {
+const walk = (root, funcMap) => {
   const currPath = [];
 
-  const _containerDefault = (mr) => mr.content.map(_process);
+  const _containerDefault = (mr) => mr.content.map(_walk);
   const _textDefault = (mr) => mr;
 
-  const _processElem = (mr, name, defaultFunc) => {
+  const _walkElem = (mr, name, defaultFunc) => {
     currPath.push(name);
     const processFunc = funcMap.get(currPath) || defaultFunc;
-    const result = processFunc(mr, _process, currPath);
+    const result = processFunc(mr, _walk, currPath);
     currPath.pop();
     return result;
   };
 
-  const _process = (mr) => {
+  const _walk = (mr) => {
     if (mr === null || mr === undefined) {
       return;
     }
     switch (mr.constructor) {
       case Markright:
-        return _processElem(mr, "<markright>", _containerDefault);
+        return _walkElem(mr, "<markright>", _containerDefault);
       case Paragraph:
-        return _processElem(mr, "<paragraph>", _containerDefault);
+        return _walkElem(mr, "<paragraph>", _containerDefault);
       case Line:
-        return _processElem(mr, "<line>", _containerDefault);
+        return _walkElem(mr, "<line>", _containerDefault);
       case String:
-        return _processElem(mr, "<text>", _textDefault);
+        return _walkElem(mr, "<text>", _textDefault);
       case Command: {
         currPath.push(mr.name);
-        const processFunc = funcMap.get(currPath);
-        if (processFunc == null) {
+        const walkFunc = funcMap.get(currPath);
+        if (walkFunc == null) {
           throw new Error(`Cannot resolve "${currPath}"`);
         }
-        const result = processFunc(mr, _process, currPath);
+        const result = walkFunc(mr, _walk, currPath);
         currPath.pop();
         return result;
       }
@@ -397,14 +306,90 @@ const process = (root, funcMap) => {
     }
   };
 
-  _process(root);
+  _walk(root);
+};
+
+// Printer
+
+class Printer {
+  constructor(wstream) {
+    this.wstream = wstream;
+    this.indentation = 0;
+    this.lineStart = true;
+  }
+  endl() {
+    this.wstream.write("\n");
+    this.lineStart = true;
+  }
+  indented(fn) {
+    this.indentation += 2;
+    fn();
+    this.indentation -= 2;
+  }
+  write(x) {
+    if (this.lineStart) {
+      this.wstream.write(" ".repeat(this.indentation));
+      this.lineStart = false;
+    }
+    this.wstream.write(x);
+  }
+}
+
+const print = (root, writeStream = process.stdout) => {
+  const out = new Printer(writeStream);
+  const pr = new FuncMap();
+
+  pr.on("<markright>", (M, process) => {
+    for (let i = 0; i < M.content.length; i++) {
+      if (i > 0) out.endl();
+      process(M.content[i]);
+    }
+  });
+
+  pr.on("<paragraph>", (P, process) => {
+    for (let i = 0; i < P.content.length; i++) {
+      process(P.content[i]);
+      if (P.content[i] instanceof Line) out.endl();
+    }
+  });
+  
+  // <line> can use the default processor
+
+  pr.on("<text>", text => out.write(text));
+
+  pr.on("*", (cmd, process) => {
+    out.write(`@${cmd.name}`);
+    if (cmd.args) {
+      out.write(`(${cmd.args.join(",")})`);
+    }
+    switch (cmd.type) {
+      case Command.INLINE: {
+        if (cmd.content) {
+          out.write(`${cmd.openDelim}`);
+          process(cmd.content);
+          out.write(`${cmd.closeDelim}`);
+        }
+        break;
+      }
+      case Command.INPARAGRAPH:
+      case Command.BLOCK: {
+        out.endl();
+        out.indented(() => {
+          process(cmd.content)
+        });
+        break;
+      }
+    }
+  });
+
+  walk(root, pr);
 };
 
 module.exports = {
   parse,
   parseLine,
   parseFile,
-  print,
   FuncMap,
-  process,
+  walk,
+  print,
 };
