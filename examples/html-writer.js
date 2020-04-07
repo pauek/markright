@@ -1,11 +1,39 @@
 const mr = require("../markright");
-const Writer = require("./writer");
+
+class Writer {
+  constructor(wstream) {
+    this.wstream = wstream;
+    this.indentation = 0;
+    this.lineStart = true;
+  }
+  endl() {
+    this.wstream.write("\n");
+    this.lineStart = true;
+  }
+  indented(fn) {
+    this.indentation += 2;
+    fn();
+    this.indentation -= 2;
+  }
+  indent(n) {
+    this.indentation += n;
+  }
+  write(x) {
+    if (this.lineStart) {
+      this.lineStart = false;
+      this.wstream.write(" ".repeat(this.indentation));
+    }
+    this.wstream.write(x);
+  }
+  writeln(x) {
+    this.write(x);
+    this.endl();
+  }
+}
 
 const root = mr.parseFile("html.mr");
 const out = new Writer(process.stdout);
 const html = new mr.FuncMap();
-
-html.on("<text>", (text) => out.write(text));
 
 html.on("<paragraph>", (paragraph, process) => {
   paragraph.content.forEach((node) => {
@@ -14,7 +42,9 @@ html.on("<paragraph>", (paragraph, process) => {
   });
 });
 
-const processTag = (cmd, process) => {
+html.on("<text>", (text) => out.write(text));
+
+const walkTag = (cmd, process) => {
   const { name, args, type } = cmd;
   if (type === "block") {
     out.writeln(`<${name}${args ? " " + args.join(" ") : ""}>`);
@@ -27,7 +57,7 @@ const processTag = (cmd, process) => {
   }
 };
 
-html.on("*", processTag);
+html.on("*", walkTag);
 
 html.on("", () => out.write("<br>"));
 
