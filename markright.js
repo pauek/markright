@@ -4,8 +4,8 @@ const fs = require("fs");
 
 const rEmpty = /^[ \t]*$/;
 const rIndent = /^( )*/;
-const rCommandHeader = /@([a-zA-Z0-9_-]*)(\(([^),]+(,[^),]+)*)*\))?/;
-const rBlockCommand = /^@([a-zA-Z0-9_-]*)(\([^),]+(,[^),]+)*\))?\s*$/;
+const rCommandHeader = /@([a-zA-Z0-9_-]*\*?)(\(([^),]+(,[^),]+)*)*\))?/;
+const rBlockCommand = /^@([a-zA-Z0-9_-]*\*?)(\([^),]+(,[^),]+)*\))?\s*$/;
 
 // Utils
 
@@ -65,7 +65,7 @@ class Command {
     if (args) this.args = args;
   }
   isRaw() {
-    return this.name[this.name.length - 1] == "*";
+    return this.name[this.name.length - 1] === "*";
   }
   get closeDelim() {
     return getCloseDelim(this.openDelim[0]).repeat(this.openDelim.length);
@@ -251,7 +251,13 @@ class FuncMap {
     this.table = [];
   }
   on(pathStr, func) {
-    this.table.push({ path: parsePath(pathStr), func });
+    if (Array.isArray(pathStr)) {
+      pathStr.forEach(pstr => {
+        this.table.push({ path: parsePath(pstr), func });
+      })
+    } else {
+      this.table.push({ path: parsePath(pathStr), func });
+    }
   }
   get(path) {
     for (let i = this.table.length - 1; i >= 0; i--) {
@@ -386,6 +392,11 @@ const print = (root, writeStream = process.stdout) => {
 };
 
 module.exports = {
+  Markright,
+  Paragraph,
+  Line,
+  Command,
+
   parse,
   parseLine,
   parseFile,
