@@ -1,4 +1,4 @@
-@test
+@test(First)
   @input*
     @a @b @c
   @output*
@@ -10,6 +10,27 @@
           Cmd(b)
           " "
           Cmd(c)
+@test(Inline command)
+  @input*
+    a @b c
+  @output*
+    Markright
+      Paragraph
+        Line
+          "a "
+          Cmd(b)
+          " c"
+@test(Block command)
+  @input*
+    @cmd(a, b, c)
+      text content
+  @output*
+    Markright
+      Cmd(cmd, ["a", " b", " c"])
+        Markright
+          Paragraph
+            Line
+              "text content"
 @test(A paragraph)
   @input*
     a @b c
