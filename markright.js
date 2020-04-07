@@ -240,10 +240,12 @@ const pathMatch = (modelPath, path) => {
       modelElem === elem
     );
   };
-  const minLength = Math.min(modelPath.length, path.length);
-  for (let i = 0; i < minLength; i++) {
+  for (let i = 0; i < modelPath.length; i++) {
     const j = path.length - 1 - i;
     const mj = modelPath.length - 1 - i;
+    if (j < 0) {
+      return false; // path is not long enough
+    }
     if (!_elemMatch(modelPath[mj], path[j])) {
       return false;
     }
@@ -276,7 +278,7 @@ class FuncMap {
 }
 
 const walk = (root, funcMap) => {
-  const currPath = [];
+  const currPath = [""];
 
   const _containerDefault = (mr) => mr.content.map(_walk);
   const _textDefault = (mr) => mr;
@@ -317,7 +319,7 @@ const walk = (root, funcMap) => {
     }
   };
 
-  _walk(root);
+  return _walk(root);
 };
 
 // Printer
