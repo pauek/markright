@@ -1,12 +1,12 @@
 const markright = require("../markright");
 
 const root = markright.parseFile("a.mr");
-const map = new markright.FuncMap();
+const tableMap = new markright.FuncMap();
 
-map.on("/<markright>", (mr, walk) => mr.content.map(walk));
+tableMap.on("/<markright>", (mr, walk) => mr.content.map(walk));
 
-map.on("table", (cmd, walk) => walk(cmd.content));
-map.on("table/<markright>", (mr, walk) => {
+tableMap.on("table", (cmd, walk) => walk(cmd.content));
+tableMap.on("table/<markright>", (mr, walk) => {
   const rows = [];
   // aggregate rows in different paragraphs
   for (let paragraph of mr.content) {
@@ -16,10 +16,10 @@ map.on("table/<markright>", (mr, walk) => {
   }
   return rows;
 });
-map.on("table/<markright>/<paragraph>", (paragraph, walk) =>
+tableMap.on("table/<markright>/<paragraph>", (paragraph, walk) =>
   paragraph.content.map(walk)
 );
-map.on("table/<markright>/<paragraph>/<line>", (line, walk) => {
+tableMap.on("table/<markright>/<paragraph>/<line>", (line, walk) => {
   let currCell = [];
   const cells = [];
   for (let item of line.content) {
@@ -35,8 +35,50 @@ map.on("table/<markright>/<paragraph>/<line>", (line, walk) => {
   return cells;
 });
 
-map.on("em", (em, walk) => {
+tableMap.on("em", (em, walk) => {
   return `*${walk(em.content)}*`;
 });
 
-console.log(markright.walk(root, map));
+const printTable = (table) => {
+  const colSize = (col) => {
+    let sz = 0;
+    for (let i = 0; i < table.length; i++) {
+      sz = Math.max(sz, table[i][col].length);
+    }
+    return sz;
+  };
+  const numCols = table[0].length;
+  const colSizes = [];
+  for (let i = 0; i < numCols; i++) {
+    colSizes.push(colSize(i) + 2);
+  }
+
+  const showLine = () => {
+    process.stdout.write("+");
+    for (let i = 0; i < colSizes.length; i++) {
+      process.stdout.write("-".repeat(colSizes[i] + 2));
+      process.stdout.write("+");
+    }
+    process.stdout.write("\n");
+  };
+
+  const showRow = (row) => {
+    process.stdout.write("| ");
+    for (let i = 0; i < row.length; i++) {
+      const space = " ".repeat(colSizes[i] - row[i].length);
+      process.stdout.write(row[i] + space);
+      process.stdout.write(" | ");
+    }
+    process.stdout.write('\n');
+  };
+
+  showLine();
+  for (let i = 0; i < table.length; i++) {
+    showRow(table[i]);
+    showLine();
+  }
+};
+
+for (let table of markright.walk(root, tableMap)) {
+  printTable(table);
+}
