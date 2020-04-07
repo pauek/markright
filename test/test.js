@@ -84,12 +84,16 @@ const checkTestArgs = (cmd) => {
       `@text should have a single argument (the name of the test)`
     );
   }
-}
+};
 
 const performTest = (input, modelOutput) => {
-  const mr = markright.parse(input);
-  const output = printAst(mr);
-  return compareLineArrays(output, modelOutput);
+  try {
+    const mr = markright.parse(input);
+    const output = printAst(mr);
+    return compareLineArrays(output, modelOutput);
+  } catch (e) {
+    return `${e.toString()}`;
+  }
 };
 
 const addResult = (name, fn) => {
@@ -113,12 +117,14 @@ const testFuncMap = new markright.FuncMap();
 
 testFuncMap.on("/<markright>", (mr, walk) => {
   mr.content.forEach(walk);
-  process.stdout.write('\n');
-})
+  process.stdout.write("\n");
+});
 
 testFuncMap.on("print-test*", (cmd) => {
   checkTestArgs(cmd);
-  const { args: [name] } = cmd;
+  const {
+    args: [name],
+  } = cmd;
   const mr = markright.parse(cmd.content);
   const lineWriter = new LineWriter();
   markright.print(mr, lineWriter);
