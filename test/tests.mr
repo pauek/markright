@@ -40,7 +40,66 @@
         hola
     xxx
   more text
-@parse-test(First)
+@parse-test(Hi)
+  @input*
+    hi
+  @output*
+    Markright
+      Paragraph
+        Line
+          "hi"
+@parse-test(Two lines)
+  @input*
+    hi
+    ho
+  @output*
+    Markright
+      Paragraph
+        Line
+          "hi"
+        Line
+          "ho"
+@parse-test(Two paragraphs)
+  @input*
+    hi
+
+    ho
+  @output*
+    Markright
+      Paragraph
+        Line
+          "hi"
+      Paragraph
+        Line
+          "ho"
+@parse-test(Paragraph Command Paragraph)
+  @input*
+    hi
+
+    @cmd
+
+    ho
+  @output*
+    Markright
+      Paragraph
+        Line
+          "hi"
+      Cmd(cmd)
+        Markright
+      Paragraph
+        Line
+          "ho"
+@parse-test(Inline command)
+  @input*
+    a @b c
+  @output*
+    Markright
+      Paragraph
+        Line
+          "a "
+          Cmd(b)
+          " c"
+@parse-test(Three inline commands)
   @input*
     @a @b @c
   @output*
@@ -52,16 +111,6 @@
           Cmd(b)
           " "
           Cmd(c)
-@parse-test(Inline command)
-  @input*
-    a @b c
-  @output*
-    Markright
-      Paragraph
-        Line
-          "a "
-          Cmd(b)
-          " c"
 @parse-test(Block command)
   @input*
     @cmd(a, b, c)
@@ -73,7 +122,25 @@
           Paragraph
             Line
               "text content"
-@parse-test(A paragraph)
+@parse-test(Inparagraph command)
+  @input*
+    some text
+    @somecmd(a)
+      inside text
+    some more text
+  @output*
+    Markright
+      Paragraph
+        Line
+          "some text"
+        Cmd(somecmd, ["a"])
+          Markright
+            Paragraph
+              Line
+                "inside text"
+        Line
+          "some more text"
+@parse-test(More complex paragraph)
   @input*
     a @b c
     @d{e} @f(g)
@@ -90,3 +157,22 @@
               "e"
           " "
           Cmd(f, ["g"])
+@parse-test(More complex line)
+  @input*
+    Some line @strong[with @em{many @code<new>} commands] inside
+  @output*
+    Markright
+      Paragraph
+        Line
+          "Some line "
+          Cmd(strong)
+            Line
+              "with "
+              Cmd(em)
+                Line
+                  "many "
+                  Cmd(code)
+                    Line
+                      "new"
+              " commands"
+          " inside"
