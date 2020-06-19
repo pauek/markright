@@ -1,7 +1,7 @@
 @table
   First Column @ Second @em{blis} Column
-  1 @ 2
-  a @ b
+  123 @ 456
+  Some text @ A longer text: "Ut mollit consectetur duis eiusmod consectetur"
   c @ d
 
 @table

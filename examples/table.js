@@ -1,11 +1,12 @@
 const markright = require("../markright");
 
-const root = markright.parseFile("a.mr");
+const root = markright.parseFile("table.mr");
 const tableMap = new markright.FuncMap();
 
 tableMap.on("/<markright>", (mr, walk) => mr.content.map(walk));
 
 tableMap.on("table", (cmd, walk) => walk(cmd.content));
+
 tableMap.on("table/<markright>", (mr, walk) => {
   const rows = [];
   // aggregate rows in different paragraphs
@@ -16,9 +17,11 @@ tableMap.on("table/<markright>", (mr, walk) => {
   }
   return rows;
 });
+
 tableMap.on("table/<markright>/<paragraph>", (paragraph, walk) =>
   paragraph.content.map(walk)
 );
+
 tableMap.on("table/<markright>/<paragraph>/<line>", (line, walk) => {
   let currCell = [];
   const cells = [];
@@ -69,7 +72,7 @@ const printTable = (table) => {
       process.stdout.write(row[i] + space);
       process.stdout.write(" | ");
     }
-    process.stdout.write('\n');
+    process.stdout.write("\n");
   };
 
   showLine();
