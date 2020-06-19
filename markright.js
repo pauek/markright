@@ -1,21 +1,19 @@
 const fs = require("fs");
 
 // Regular Expressions
-
 const rEmpty = /^[ \t]*$/;
 const rIndent = /^( )*/;
 const rCommandHeader = /@([a-zA-Z0-9_-]*\*?)(\(([^),]+(,[^),]+)*)*\))?/;
 const rBlockCommand = /^@([a-zA-Z0-9_-]*\*?)(\([^),]+(,[^),]+)*\))?\s*$/;
 
 // Utils
-
 const isEmpty = (line) => rEmpty.test(line);
 const indentation = (line) => line.match(rIndent)[0].length;
 const isSingleCommand = (line) => rBlockCommand.test(line);
 
 // These are matching tables...
-const OPEN_DELIMS = "[{<",
-  CLOSE_DELIMS = "]}>";
+const OPEN_DELIMS = "[{<";
+const CLOSE_DELIMS = "]}>";
 const getCloseDelim = (c) => CLOSE_DELIMS[OPEN_DELIMS.indexOf(c)];
 
 const getDelimiters = (line) => {
@@ -66,6 +64,15 @@ class Command {
   }
   isRaw() {
     return this.name[this.name.length - 1] === "*";
+  }
+  isInline() {
+    return this.type === Command.INLINE;
+  }
+  isBlock() {
+    return this.type === Command.BLOCK;
+  }
+  isInParagraph() {
+    return this.type === Command.INPARAGRAPH;
   }
   get closeDelim() {
     return getCloseDelim(this.openDelim[0]).repeat(this.openDelim.length);
@@ -259,9 +266,9 @@ class FuncMap {
   }
   on(pathStr, func) {
     if (Array.isArray(pathStr)) {
-      pathStr.forEach(pstr => {
+      pathStr.forEach((pstr) => {
         this.table.push({ path: parsePath(pstr), func });
-      })
+      });
     } else {
       this.table.push({ path: parsePath(pathStr), func });
     }
@@ -346,6 +353,10 @@ class Printer {
     }
     this.wstream.write(x);
   }
+  writeln(x) {
+    this.write(x);
+    this.endl();
+  }
 }
 
 const print = (root, out = new Printer()) => {
@@ -364,10 +375,10 @@ const print = (root, out = new Printer()) => {
       if (P.content[i] instanceof Line) out.endl();
     }
   });
-  
+
   // <line> can use the default processor
 
-  pr.on("<text>", text => out.write(text));
+  pr.on("<text>", (text) => out.write(text));
 
   pr.on("*", (cmd, process) => {
     out.write(`@${cmd.name}`);
@@ -387,7 +398,7 @@ const print = (root, out = new Printer()) => {
       case Command.BLOCK: {
         out.endl();
         out.indented(() => {
-          process(cmd.content)
+          process(cmd.content);
         });
         break;
       }
@@ -409,4 +420,5 @@ module.exports = {
   FuncMap,
   walk,
   print,
+  Printer,
 };

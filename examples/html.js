@@ -1,28 +1,44 @@
-const { parseFile, createProcessor } = require("../markright");
+
+const { parseFile, walk, FuncMap, Printer } = require("../markright");
+
 const mr = parseFile("html.mr");
+const html = new FuncMap();
+const out = new Printer();
 
-const html = createProcessor();
+html.on("<text>", (text) => out.write(text));
+html.on("<paragraph>", (paragraph, walk) => {
+  paragraph.content.forEach((elem) => {
+    walk(elem);
+    out.endl();
+  });
+});
 
-html.line(({ content }) => [...content].join(""));
-html.markright(({ content }) => [].concat(...[...content]));
+html.on("*", (cmd, walk) => {
+  if (cmd.name === "") {
+    out.write(`<br>`);
+    return;
+  }
+  out.write(`<${cmd.name}`);
+  out.write(cmd.args ? " " + cmd.args.join(" ") : "");
+  out.write(">");
+  if (cmd.content) {
+    if (cmd.isInline()) {
+      walk(cmd.content);
+    } else {
+      out.endl();
+      out.indented(() => {
+        if (cmd.isRaw()) {
+          cmd.content.forEach((line) => out.writeln(line));
+        } else {
+          walk(cmd.content);
+        }
+      });
+    }
+  }
+  out.write(`</${cmd.name}>`);
+  if (cmd.isBlock()) {
+    out.endl();
+  }
+});
 
-const tag = ({ cmd: { name, args }, content }) => {
-  const children = content.next().value;
-  return [
-    `<${name}${args ? " " + args.join(" ") : ""}>`,
-    ...children.map((line) => "  " + line),
-    `</${name}>`,
-  ];
-};
-
-const inlineTagHandler = ({ cmd: { name, args }, content }) =>
-  `<${name}${args ? " " + args.join(" ") : ""}>${[...content]}</${name}>`;
-
-const inlineTagList = ["em", "strong", "li", "h1"];
-
-html.cmd("*", tag);
-html.cmdList(inlineTagList, inlineTagHandler);
-html.cmd("", () => "<br>");
-
-const lines = html.process(mr);
-lines.forEach((line) => process.stdout.write(line + "\n"));
+walk(mr, html);

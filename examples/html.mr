@@ -10,6 +10,8 @@
 
       @li{xyzxyzxyz}
       @li{abcabc}
+      @li
+        Some other @em{text} @amazing{text} bla
 
     @table
       a @ b
