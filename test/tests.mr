@@ -1,5 +1,5 @@
 @print-test*(1)
-  @a{hola @d<que @e[x] @ hi ho> tal} fiu fiu
+  @a{hola @d{que @e<x> @ hi ho} tal} fiu fiu
   hola que tal @a{} @b @c(1, 2, 3)<<ddd>>
 
   @B(a,b,c)
@@ -201,9 +201,9 @@
         "1st"
         "  2nd"
         "3rd"
-@parse-test(Correct closing delimiter)
+@parse-test(Nested Delimiter)
   @input*
-    @A{{b @c{d} e}}
+    @A{b @c{d} e}
   @output*
     Markright
       Paragraph
@@ -215,6 +215,24 @@
                 Line
                   "d"
               " e"
+@parse-test(Nested Delimiter 2)
+  @input*
+    @a{b @c{d @e{f} g} h}
+  @output*
+    Markright
+      Paragraph
+        Line
+          Cmd(a)
+            Line
+              "b "
+              Cmd(c)
+                Line
+                  "d "
+                  Cmd(e)
+                    Line
+                      "f"
+                  " g"
+              " h"
 @parse-test(Different delimiters 2)
   @input*
     @a<A>@b<<B>>@c<<<C>>>@d<<<<D>>>>
