@@ -4,11 +4,11 @@
 
   @body
     @ul
-      @li(special="a"){Yay here}
+      @li(special="a",b=3,c="hi"){Yay here}
       @li(a="2"){Due 2 dos}
       @li{Trei @ tres three}
 
-      @li{xyzxyzxyz}
+      @li(enabled){xyzxyzxyz}
       @li{abcabc}
       @li
         Some other @em{text} @amazing{text} bla
