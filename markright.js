@@ -101,7 +101,7 @@ const parseCommandHeader = (line) => {
 class ParseError extends Error {
   constructor(...params) {
     super(...params);
-    this.name = 'ParseError';
+    this.name = "ParseError";
   }
 }
 
@@ -190,58 +190,63 @@ const parse = (lines) => {
   return new Markright(blocks);
 };
 
-const findClosingDelim = (cmd, line) => {
-
-}
-
 const parseLine = (line) => {
-  const items = [];
+  const _parseLine = (closeDelim) => {
+    const items = [];
 
-  while (true) {
-    if (line.length === 0) {
-      break;
-    }
-
-    // Text until first '@'
-    const at = line.indexOf("@");
-    if (at === -1) {
-      items.push(line);
-      break;
-    }
-    if (at > 0) {
-      items.push(line.slice(0, at));
-      line = line.slice(at);
-    }
-
-    // Command
-    const { cmd, pos } = parseCommandHeader(line);
-    line = line.slice(pos);
-    cmd.type = Command.INLINE;
-
-    // Parse delimited text
-    cmd.delims = getDelimiters(line);
-    if (cmd.delims) {
-      const { close, length } = cmd.delims;
-      const start = length;
-      // FIXME: Here if we search for the closing delimiter, we get it wrong
-      //   with a string like `@A{b @c{d} e}`, because the closing brace of the
-      //   'A' command is the one after 'd'. If the command is not raw, we could
-      //   parse the line telling it to stop at the closing delimiter. If it is raw
-      //   we have to look for the first closing delimiter anyway.
-
-      // const end = findClosingDelim(cmd, line);
-      const end = line.indexOf(close.repeat(length));
-      if (end === -1) {
-        throw new ParseError(`Open delimiter ${cmd.openDelim} not closed`);
+    while (true) {
+      if (line.length === 0) {
+        break;
       }
-      cmd.content = parseLine(line.slice(start, end));
-      line = line.slice(end + length);
+
+      const cmdPos = line.indexOf("@");
+
+      // Close delimiter?
+      if (closeDelim) {
+        const delimPos = line.indexOf(closeDelim);
+        // Check that the closing delimiter is before the command
+        if (delimPos >= 0 && (cmdPos === -1 || delimPos < cmdPos)) {
+          if (delimPos > 0) {
+            items.push(line.slice(0, delimPos));
+          }
+          line = line.slice(delimPos + closeDelim.length);
+          break;
+        }
+      }
+
+      // Command?
+      if (cmdPos >= 0) {
+        if (cmdPos > 0) {
+          items.push(line.slice(0, cmdPos));
+        }
+        line = line.slice(cmdPos);
+
+        // Command
+        const { cmd, pos } = parseCommandHeader(line);
+        line = line.slice(pos);
+        cmd.type = Command.INLINE;
+
+        // Parse delimited text
+        cmd.delims = getDelimiters(line);
+        if (cmd.delims) {
+          line = line.slice(cmd.delims.length);
+          cmd.content = _parseLine(cmd.closeDelim);
+        }
+        items.push(cmd);
+        continue;
+      }
+
+      // Just text left
+      if (line) {
+        items.push(line);
+      }
+      break;
     }
+    return new Line(items);
+  };
 
-    items.push(cmd);
-  }
-
-  return new Line(items);
+  const result = _parseLine();
+  return result;
 };
 
 const parseFile = (filename) => {
