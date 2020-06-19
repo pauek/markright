@@ -74,8 +74,13 @@ class Command {
   isInParagraph() {
     return this.type === Command.INPARAGRAPH;
   }
+  get openDelim() {
+    const { open, length } = this.delims;
+    return open.repeat(length);
+  }
   get closeDelim() {
-    return getCloseDelim(this.openDelim[0]).repeat(this.openDelim.length);
+    const { close, length } = this.delims;
+    return close.repeat(length);
   }
 }
 
@@ -92,6 +97,13 @@ const parseCommandHeader = (line) => {
     pos: all.length,
   };
 };
+
+class ParseError extends Error {
+  constructor(...params) {
+    super(...params);
+    this.name = 'ParseError';
+  }
+}
 
 const parse = (lines) => {
   const blocks = [];
@@ -112,7 +124,7 @@ const parse = (lines) => {
           const cleanLine = lines[i].slice(baseIndentation + 2);
           result.push(cleanLine);
         } else {
-          throw new Error(`Wrong indentation: ${lines[i]}`);
+          throw new ParseError(`Wrong indentation: ${lines[i]}`);
         }
       }
       i++;
@@ -178,6 +190,10 @@ const parse = (lines) => {
   return new Markright(blocks);
 };
 
+const findClosingDelim = (cmd, line) => {
+
+}
+
 const parseLine = (line) => {
   const items = [];
 
@@ -203,19 +219,20 @@ const parseLine = (line) => {
     cmd.type = Command.INLINE;
 
     // Parse delimited text
-    const delims = getDelimiters(line);
-    if (delims) {
-      const { open, close, length } = delims;
-      cmd.openDelim = open.repeat(length);
+    cmd.delims = getDelimiters(line);
+    if (cmd.delims) {
+      const { close, length } = cmd.delims;
       const start = length;
       // FIXME: Here if we search for the closing delimiter, we get it wrong
       //   with a string like `@A{b @c{d} e}`, because the closing brace of the
       //   'A' command is the one after 'd'. If the command is not raw, we could
       //   parse the line telling it to stop at the closing delimiter. If it is raw
       //   we have to look for the first closing delimiter anyway.
+
+      // const end = findClosingDelim(cmd, line);
       const end = line.indexOf(close.repeat(length));
       if (end === -1) {
-        throw new Error(`Open delimiter ${open.repeat(length)} not closed`);
+        throw new ParseError(`Open delimiter ${cmd.openDelim} not closed`);
       }
       cmd.content = parseLine(line.slice(start, end));
       line = line.slice(end + length);
@@ -284,6 +301,17 @@ class FuncMap {
   }
 }
 
+class ResolveError extends Error {
+  constructor(path, ...params) {
+    super(...params);
+    this.name = "ResolveError";
+    this.path = path;
+  }
+  get message() {
+    return `Cannot resolve "${this.path.join("/")}"`;
+  }
+}
+
 const walk = (root, funcMap) => {
   const currPath = [""];
 
@@ -315,7 +343,7 @@ const walk = (root, funcMap) => {
         currPath.push(mr.name);
         const walkFunc = funcMap.get(currPath);
         if (walkFunc == null) {
-          throw new Error(`Cannot resolve "${currPath}"`);
+          throw new ResolveError(currPath);
         }
         const result = walkFunc(mr, _walk, currPath);
         currPath.pop();

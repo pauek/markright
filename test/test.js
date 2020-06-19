@@ -155,10 +155,20 @@ testFuncMap.on("parse-test", (cmd) => {
       );
     }
   }
-
   addResult(name, () => performTest(input, output));
 });
 
-const tests = markright.parseFile("tests.mr");
-markright.walk(tests, testFuncMap);
+try {
+  const tests = markright.parseFile("tests.mr");
+  markright.walk(tests, testFuncMap);
+} catch (e) {
+  switch (e.name) {
+    case 'ResolveError': {
+      console.error(e.message);
+      break;
+    }
+    default:
+      console.error(e);
+  }
+}
 showErrors();

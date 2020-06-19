@@ -201,6 +201,20 @@
         "1st"
         "  2nd"
         "3rd"
+@parse-test(Correct closing delimiter)
+  @input*
+    @A{{b @c{d} e}}
+  @output*
+    Markright
+      Paragraph
+        Line
+          Cmd(A)
+            Line
+              "b "
+              Cmd(c)
+                Line
+                  "d"
+              " e"
 @parse-test(Different delimiters 2)
   @input*
     @a<A>@b<<B>>@c<<<C>>>@d<<<<D>>>>
