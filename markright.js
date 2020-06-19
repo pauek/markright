@@ -191,6 +191,10 @@ const parse = (lines) => {
 };
 
 const parseLine = (line) => {
+  // FIXME: Implement this using a cursor and by characters
+  //        The logic now based on indexOf for '@' and the 
+  //        closeDelim is a little obfuscated.
+
   const _parseLine = (closeDelim) => {
     const items = [];
 
