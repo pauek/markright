@@ -157,7 +157,7 @@ const parse = (lines) => {
           const mr = parse(innerLines);
           if (mr.content.length > 1) {
             // FIXME: Pass an argument to parse to check empty lines when they occur??
-            throw new Error(
+            throw new ParseError(
               `An inparagraph command should have only one block`
             );
           }
