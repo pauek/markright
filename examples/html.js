@@ -1,4 +1,3 @@
-
 const { parseFile, walk, FuncMap, Printer } = require("../markright");
 
 const mr = parseFile("html.mr");
@@ -6,6 +5,7 @@ const html = new FuncMap();
 const out = new Printer();
 
 html.on("<text>", (text) => out.write(text));
+
 html.on("<paragraph>", (paragraph, walk) => {
   paragraph.content.forEach((elem) => {
     walk(elem);
@@ -21,19 +21,17 @@ html.on("*", (cmd, walk) => {
   out.write(`<${cmd.name}`);
   out.write(cmd.args ? " " + cmd.args.join(" ") : "");
   out.write(">");
-  if (cmd.content) {
-    if (cmd.isInline()) {
-      walk(cmd.content);
-    } else {
-      out.endl();
-      out.indented(() => {
-        if (cmd.isRaw()) {
-          cmd.content.forEach((line) => out.writeln(line));
-        } else {
-          walk(cmd.content);
-        }
-      });
-    }
+  if (cmd.isInline()) {
+    walk(cmd.content);
+  } else {
+    out.endl();
+    out.indented(() => {
+      if (cmd.isRaw()) {
+        cmd.content.forEach((item) => out.writeln(item));
+      } else {
+        walk(cmd.content);
+      }
+    });
   }
   out.write(`</${cmd.name}>`);
   if (cmd.isBlock()) {
