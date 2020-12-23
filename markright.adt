@@ -1,6 +1,5 @@
 Markright = List(Paragraph | Command(Markright))
-Paragraph = List(Line      | Command(Paragraph))
-Line      = List(String    | Command(Line))
+Paragraph = List(String    | Command(Paragraph))
 
 Command(T) = {
   name: String
