@@ -234,7 +234,13 @@ const parseLine = (line) => {
         cmd.delims = getDelimiters(line);
         if (cmd.delims) {
           line = line.slice(cmd.delims.length);
-          cmd.content = _parseLine(cmd.closeDelim);
+          if (cmd.isRaw()) {
+            const closePos = line.indexOf(cmd.delims.close);
+            cmd.content = line.slice(0, closePos);
+            line = line.slice(closePos + cmd.delims.length);
+          } else {
+            cmd.content = _parseLine(cmd.closeDelim);
+          }
         }
         items.push(cmd);
         continue;
