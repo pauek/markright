@@ -60,7 +60,47 @@ Esto es lo mismo que (en VSCode hay que hacer Alt+Z para el folding).
   Officia amet labore incididunt consectetur. Consectetur consectetur tempor irure anim nostrud. @em{Nulla deserunt ullamco ad reprehenderit exercitation anim officia anim irure eu exercitation ut proident commodo. Anim dolor do Lorem do id nulla culpa veniam consectetur.} Qui proident labore culpa duis officia aute nisi elit reprehenderit esse pariatur ipsum tempor.
 ```
 
-## Commands: Block vs Inline
+## Un caso particular: es necesario hacerle caso?
+
+En el ejemplo de la tabla, resulta que se utiliza la partición natural de las líneas para hacerla
+coincidir con las filas de la tabla. Eso me parece coincidencia. En el editor visual tendrías @table
+con @row's dentro, de forma que quizás la representación textual no queda tan bien, pero no se
+supone que debas editar en ella.
+
+Por otro lado, las tablas introducen un tema para reflexionar: para partir las filas, si pones una @
+sola, es una forma de dividir un párrafo en distintos trozos de texto? Eso, otra vez, es útil
+si editas en modo texto pero quizás el editor visual puede hacer otras cosas... ?
+
+Lo más simple en este caso es que un @row sea un comando de bloque y los distintos párrafos son las
+celdas. O sea, una tabla así:
+
++---------+----+----+
+| aaaaaaa | bb | cc |
++---------+----+----+
+| 11      | 22 | 33 |
++---------+----+----+
+
+Se escribiría así:
+```
+@table
+  @row
+    aaaaaaa
+
+    bb
+
+    cc
+
+  @row
+    11
+
+    22
+
+    33
+```
+
+Queda feo en el formato texto pero luego en el visual lo pintarás distinto (por ser una tabla).
+
+# Commands: Block vs Inline
 
 Ejemplo de inline command erróneo porque introduce una línea vacía en el párrafo donde está:
 ```
