@@ -1,5 +1,7 @@
+// Markright Abstract Data Types
+
 Markright = List(Paragraph | Command(Markright))
-Paragraph = List(String    | Command(Paragraph))
+Paragraph = List(String | LineBreak | Command(Paragraph))
 
 Command(T) = {
   name: String
