@@ -84,10 +84,10 @@ const printAst = (root) => {
 
 const errors = [];
 
-const checkTestArgs = (cmd) => {
+const checkTitleArgument = (cmd) => {
   if (!Array.isArray(cmd.args) || cmd.args.length !== 1) {
     throw new Error(
-      `@text should have a single argument (the name of the test)`
+      `@${cmd.name} should have a single argument (the title of the test)`
     );
   }
 };
@@ -127,7 +127,7 @@ testFuncMap.on("/<markright>", (mr, walk) => {
 });
 
 testFuncMap.on("print-test*", (cmd) => {
-  checkTestArgs(cmd);
+  checkTitleArgument(cmd);
   const {
     args: [name],
   } = cmd;
@@ -138,7 +138,7 @@ testFuncMap.on("print-test*", (cmd) => {
 });
 
 testFuncMap.on("parse-test", (cmd) => {
-  checkTestArgs(cmd);
+  checkTitleArgument(cmd);
   let input, output;
   const {
     args: [name],
