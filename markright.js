@@ -16,14 +16,14 @@ const OPEN_DELIMS = "[{<";
 const CLOSE_DELIMS = "]}>";
 const getCloseDelim = (c) => CLOSE_DELIMS[OPEN_DELIMS.indexOf(c)];
 
-const getDelimiters = (line) => {
-  const open = line[0];
+const getDelimiters = (str) => {
+  const open = str[0];
   if (OPEN_DELIMS.indexOf(open) === -1) {
     return null;
   }
   let i;
-  for (i = 1; i < line.length; i++) {
-    if (line[i] !== open) break;
+  for (i = 1; i < str.length; i++) {
+    if (str[i] !== open) break;
   }
   return { open, close: getCloseDelim(open), length: i };
 };
