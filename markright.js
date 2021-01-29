@@ -159,6 +159,22 @@ const parse = (input) => {
     return lines;
   };
 
+  const collectRawText = (closeDelim) => {
+    let text = "";
+    while (true) {
+      if (atEnd()) {
+        break;
+      }
+      if (at(closeDelim)) {
+        advance(1);
+        break;
+      }
+      text += input[i];
+      advance(1);
+    }
+    return text;
+  }
+
   const parseCommandHeader = () => {
     // Command char
     if (input[i] !== COMMAND_CHAR) {
@@ -172,12 +188,6 @@ const parse = (input) => {
       name += input[i];
       advance(1);
     }
-    // TODO: empty commands? Just a @? How can they be used?
-    /* 
-    if (name === "") {
-      error(`Command doesn't have name`);
-    }
-    */
 
     // Arguments
     if (input[i] !== "(") {
@@ -281,7 +291,11 @@ const parse = (input) => {
     if (delims) {
       cmd.delims = delims;
       advance(delims.length);
-      cmd.content = parseParagraphContent(null, cmd.closeDelim);
+      if (cmd.isRaw()) {
+        cmd.content = collectRawText(cmd.closeDelim);
+      } else {
+        cmd.content = parseParagraphContent(null, cmd.closeDelim);
+      }
     }
   };
 
@@ -483,6 +497,12 @@ class Printer {
     this.indentation += 2;
     fn();
     this.indentation -= 2;
+  }
+  withIndent(n, fn) {
+    const lastIndent = this.indentation;
+    this.indentation = n;
+    fn();
+    this.indentation = lastIndent;
   }
   write(x) {
     if (this.lineStart) {

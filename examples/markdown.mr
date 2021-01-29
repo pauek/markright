@@ -19,6 +19,9 @@ This is a @strike{strikethrough} word.
 @ul
   @li
     First item
+    with 
+    some stuff
+    added
   @li
     Second item
   @li
@@ -31,3 +34,4 @@ This is a @strike{strikethrough} word.
 @href(http://www.google.com){A link to Google}
 
 Some code: @code*{a + 1}. Some more: @code*{printf("%d", 2);}.
+

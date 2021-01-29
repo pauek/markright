@@ -1,58 +1,62 @@
 const mr = require("../markright");
-const { Command } = require("../markright");
-
 const markdown = new mr.FuncMap();
 const out = new mr.Printer();
 
+markdown.on("<markright>", (M, walk) => {
+  for (let i = 0; i < M.content.length; i++) {
+    if (i > 0) out.endl();
+    walk(M.content[i]);
+  }
+});
+
 markdown.on("<paragraph>", (paragraph, walk) => {
-  paragraph.content.forEach((line) => {
-    walk(line);
-    out.endl();
-  });
+  paragraph.content.forEach(walk);
   out.endl();
 });
+
+markdown.on("<break>", () => out.endl());
+
 markdown.on("<text>", (text) => out.write(text));
 
 markdown.on(["h1", "h2", "h3", "h4", "h5", "h6"], (cmd, walk) => {
   const level = Number(cmd.name.slice(1));
   out.write("#".repeat(level) + " ");
-  walk(cmd.content);
+  cmd.content.forEach(walk);
 });
 
 markdown.on("em", (cmd, walk) => {
-  out.write("*"), walk(cmd.content), out.write("*");
+  out.write("*"), cmd.content.forEach(walk), out.write("*");
 });
-markdown.on("em/<line>/em", (cmd, walk) => {
-  out.write("_"), walk(cmd.content), out.write("_");
+markdown.on("em/em", (cmd, walk) => {
+  out.write("_"), cmd.content.forEach(walk), out.write("_");
 });
 markdown.on("strong", (cmd, walk) => {
-  out.write("**"), walk(cmd.content), out.write("**");
+  out.write("**"), cmd.content.forEach(walk), out.write("**");
 });
-markdown.on("strong/<line>/strong", (cmd, walk) => {
-  out.write("__"), walk(cmd.content), out.write("__");
+markdown.on("strong/strong", (cmd, walk) => {
+  out.write("__"), cmd.content.forEach(walk), out.write("__");
 });
 markdown.on("strike", (cmd, walk) => {
-  out.write("~~"), walk(cmd.content), out.write("~~");
+  out.write("~~"), cmd.content.forEach(walk), out.write("~~");
 });
 
 markdown.on("ul", (cmd, walk) => {
-  walk(cmd.content);
-});
-markdown.on("ul/<markright>", (cmd, walk) => {
-  let index = 1;
-  for (let item of cmd.content) {
-    out.write(index + ". ");
-    walk(item);
-    index++;
+  for (let i = 0; i < cmd.content.length; i++) {
+    const number = `${i + 1}. `
+    out.write(number);
+    out.withIndent(number.length, () => {
+      walk(cmd.content[i]);
+    });
+    out.endl();
   }
 });
 
 markdown.on("li", (cmd, walk) => {
-  walk(cmd.content);
+  cmd.content.forEach(walk);
 });
 
 markdown.on("href", (cmd, walk) => {
-  out.write("["), walk(cmd.content), out.write("]");
+  out.write("["), cmd.content.forEach(walk), out.write("]");
   out.write(`(${cmd.args[0]})`);
 });
 
