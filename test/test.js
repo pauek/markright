@@ -141,7 +141,7 @@ const splitLines = (str) => {
   return str.split("\n");
 };
 
-const performTest = (input, expected) => {
+const parseTest = (input, expected) => {
   try {
     const mr = markright.parse(input);
     const output = printAst(mr);
@@ -154,6 +154,19 @@ const performTest = (input, expected) => {
     return `  ${e.toString()}\n`;
   }
 };
+
+const errorMessageTest = (input, expected) => {
+  try {
+    markright.parse(input);
+    return `  Should have given an error\n`;
+  } catch (e) {
+    const err = e.toString().trim();
+    const exp = expected.trim();
+    if (err !== exp) {
+      return `  Actual:   "${err}"\n  Expected: "${exp}"\n`;
+    }
+  }
+}
 
 const addResult = (name, fn) => {
   const errorMessage = fn();
@@ -171,6 +184,22 @@ const showErrors = () => {
     process.stderr.write(e.msg);
   });
 };
+
+const getInputAndExpected = (mr) => {
+  let input, expected;
+  for (let elem of mr) {
+    if (isCommand(elem, "input*")) {
+      input = elem.content;
+    } else if (isCommand(elem, "expected*")) {
+      expected = elem.content;
+    } else {
+      throw new Error(
+        `A test should only have @input* and @expected* subcommands`
+      );
+    }
+  }
+  return { input, expected };
+}
 
 const testFuncMap = new markright.FuncMap();
 
@@ -199,30 +228,17 @@ testFuncMap.on("print-test*", (cmd) => {
 
 testFuncMap.on("parse-test", (cmd) => {
   checkTitleArgument(cmd);
-  let input, output;
-  const {
-    args: [name],
-    content: mr,
-  } = cmd;
-  for (let elem of mr) {
-    if (isCommand(elem, "input*")) {
-      input = elem.content;
-    } else if (isCommand(elem, "output*")) {
-      output = elem.content;
-    } else {
-      throw new Error(
-        `A test should only have two @input* and @output* commands`
-      );
-    }
-  }
-  addResult(name, () => performTest(input, output));
+  let { input, expected } = getInputAndExpected(cmd.content);
+  addResult(cmd.args[0], () => parseTest(input, expected));
+});
+
+testFuncMap.on("error-message-test", (cmd) => {
+  checkTitleArgument(cmd);
+  let { input, expected } = getInputAndExpected(cmd.content);
+  addResult(cmd.args[0], () => errorMessageTest(input, expected));
 });
 
 testFuncMap.on("disabled", () => {});
-
-testFuncMap.on("error-message-test", (cmd) => {
-  // TODO: Implement error message test
-});
 
 try {
   const tests = markright.parseFile("./test/tests.mr");

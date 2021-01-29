@@ -53,15 +53,26 @@ const parse = (input) => {
   let lin = 1;
   let col = 1;
 
-  const error = (msg) => {
-    throw new ParseError(lin, col, msg);
+  const error = (msg, _lin, _col) => {
+    throw new ParseError(_lin || lin, _col || col, msg);
   };
 
   const atEnd = () => i >= input.length;
 
   const advance = (n) => {
-    i += n;
-    col += n;
+    for (let k = 0; k < n; k++) {
+      if (!atEnd()) {
+        if (input[i] === "\n") {
+          i++;
+          lin++;
+          col = 1;
+        } else {
+          i++;
+          col++;
+        }
+      }
+    }
+    // "@cmd1\n    @inline1 a b c\n  and more text\n"
   };
 
   const nextLine = () => {
@@ -72,7 +83,7 @@ const parse = (input) => {
     } else {
       i = endlPos + 1;
       lin++;
-      col = 0;
+      col = 1;
     }
   };
 
@@ -211,6 +222,7 @@ const parse = (input) => {
       items.push(x);
     };
 
+    let lineStart = startCmd != null;
     while (!atEnd()) {
       if (input[i] === "\n") {
         append(new Break());
@@ -226,6 +238,7 @@ const parse = (input) => {
           break;
         }
         skipIndent();
+        lineStart = true;
         continue;
       }
       if (closeDelim && at(closeDelim)) {
@@ -234,16 +247,21 @@ const parse = (input) => {
         break;
       }
       if (atCommand()) {
+        const startPos = { lin, col };
         const cmd = parseCommandHeader();
         if (atEmptyLine()) {
-          // Block Command
+          if (lineStart) {
+            error(`Block command inside paragraph`, startPos.lin, startPos.col);
+          }
         }
         parseInlineCommandContent(cmd);
         append(cmd);
+        lineStart = false;
         continue;
       }
       // Accumulate text
       text += input[i];
+      lineStart = false;
       advance(1);
     }
 
@@ -290,6 +308,10 @@ const parse = (input) => {
         // Check after empty line because the empty line might not have indentation
         break;
       }
+      if (indentLength() > baseIndent) {
+        skipIndent();
+        error(`Wrong indentation`);
+      }
       skipIndent();
       /* ???
       if (input[i] === " ") {
@@ -326,6 +348,9 @@ class ParseError extends Error {
     this.name = "ParseError";
     this.lin = lin;
     this.col = col;
+  }
+  toString() {
+    return `${this.lin}:${this.col}: ${this.name}: ${this.message}`;
   }
 }
 
@@ -472,28 +497,28 @@ class Printer {
   }
 }
 
-const print = (root, out = new Printer()) => {
-  const pr = new FuncMap();
+const print = (markright, out = new Printer()) => {
+  const printer = new FuncMap();
 
-  pr.on("<markright>", (M, walk) => {
+  printer.on("<markright>", (M, walk) => {
     for (let i = 0; i < M.content.length; i++) {
       if (i > 0) out.endl();
       walk(M.content[i]);
     }
   });
 
-  pr.on("<paragraph>", (P, walk) => {
+  printer.on("<paragraph>", (P, walk) => {
     for (let i = 0; i < P.content.length; i++) {
       walk(P.content[i]);
     }
     out.endl();
   });
 
-  pr.on("<break>", () => out.endl());
+  printer.on("<break>", () => out.endl());
 
-  pr.on("<text>", (text) => out.write(text));
+  printer.on("<text>", (text) => out.write(text));
 
-  pr.on("*", (cmd, walk) => {
+  printer.on("*", (cmd, walk) => {
     out.write(`@${cmd.name}`);
     if (cmd.args) {
       out.write(`(${cmd.args.join(",")})`);
@@ -522,7 +547,7 @@ const print = (root, out = new Printer()) => {
     }
   });
 
-  walk(root, pr);
+  walk(markright, printer);
 };
 
 module.exports = {

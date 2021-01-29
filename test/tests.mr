@@ -1,7 +1,7 @@
 @parse-test(Hi)
   @input*
     hi
-  @output*
+  @expected*
     Markright
       Paragraph
         "hi"
@@ -9,7 +9,7 @@
   @input*
     hi
     ho
-  @output*
+  @expected*
     Markright
       Paragraph
         "hi"
@@ -20,7 +20,7 @@
     hi
 
     ho
-  @output*
+  @expected*
     Markright
       Paragraph
         "hi"
@@ -29,7 +29,7 @@
 @parse-test(Inline command)
   @input*
     a @b c
-  @output*
+  @expected*
     Markright
       Paragraph
         "a "
@@ -39,7 +39,7 @@
   @input*
     @cmd(a, b, c)
       text content
-  @output*
+  @expected*
     Markright
       BlockCmd(cmd, ["a", "b", "c"])
         Paragraph
@@ -47,7 +47,7 @@
 @parse-test(Empty Command)
   @input*
     Some text @ and @ two empty inline commands
-  @output*
+  @expected*
     Markright
       Paragraph
         "Some text "
@@ -58,7 +58,7 @@
 @parse-test(Nested Delimiter)
   @input*
     @A{b @c{d} e}
-  @output*
+  @expected*
     Markright
       Paragraph
         InlineCmd(A)
@@ -71,7 +71,7 @@
     Some text @cmd(1, 2, 3){The inside
     of this command is longer than usual
     bli bla blu} and some more
-  @output*
+  @expected*
     Markright
       Paragraph
         "Some text "
@@ -85,7 +85,7 @@
 @parse-test(Three inline commands)
   @input*
     @a @b @c
-  @output*
+  @expected*
     Markright
       Paragraph
         InlineCmd(a)
@@ -99,7 +99,7 @@
       1st
         2nd
       3rd
-  @output*
+  @expected*
     Markright
       BlockCmd(raw*)
         "1st"
@@ -112,7 +112,7 @@
     @cmd
 
     ho
-  @output*
+  @expected*
     Markright
       Paragraph
         "hi"
@@ -124,7 +124,7 @@
     some text
     @somecmd(a){inside text}
     some more text
-  @output*
+  @expected*
     Markright
       Paragraph
         "some text"
@@ -137,7 +137,7 @@
   @input*
     a @b c
     @d{e} @f(g)
-  @output*
+  @expected*
     Markright
       Paragraph
         "a "
@@ -151,7 +151,7 @@
 @parse-test(More complex line)
   @input*
     Some line @strong[with @em{many @code<new>} commands] inside
-  @output*
+  @expected*
     Markright
       Paragraph
         "Some line "
@@ -169,7 +169,7 @@
     @something
 
       Yay
-  @output*
+  @expected*
     Markright
       BlockCmd(something)
         Paragraph
@@ -177,7 +177,7 @@
 @parse-test(Nested Delimiter 2)
   @input*
     @a{b @c{d @e{f} g} h}
-  @output*
+  @expected*
     Markright
       Paragraph
         InlineCmd(a)
@@ -193,7 +193,7 @@
     @a<A>@b<<B>>@c<<<C>>>@d<<<<D>>>>
     @e[E]@f[[F]]@g[[[G]]]@h[[[[H]]]]
     @i{I}@j{{J}}@k{{{K}}}@l{{{{L}}}}
-  @output*
+  @expected*
     Markright
       Paragraph
         InlineCmd(a)
@@ -227,28 +227,28 @@
     @cmd1
         @inline1 a b c
       and more text
-  @output*
-    2:5: Parse Error: Wrong indentation
+  @expected*
+    2:5: ParseError: Wrong indentation
 @error-message-test(Unfinished args)
   @input*
     @cmd(a, b, c
-  @output*
-    1:13: Parse Error: Found end of text while looking for ')'
+  @expected*
+    2:1: ParseError: Found end of text while looking for ')'
 @error-message-test(Block command in between paragraphs)
   @input*
     some text
     @somecmd(a)
       inside text
     some more text
-  @output*
-    2:1: Parse Error: Block command inside a paragraph
+  @expected*
+    2:1: ParseError: Block command inside paragraph
 @parse-test(debug 1)
   @input*
     @B(a,b,c)
       line1 @
       line2
       line3
-  @output*
+  @expected*
     Markright
       BlockCmd(B, ["a", "b", "c"])
         Paragraph
@@ -258,29 +258,13 @@
           "line2"
           Break
           "line3"
-@parse-test(debug 2)
-  @input*
-    bla bla
-    @xxx
-      1
-    bli bli
-  @output*
-    Markright
-      Paragraph
-        "bla bla"
-        Break
-        InlineCmd(xxx)
-        Break
-        "1"
-        Break
-        "bli bli"
 @parse-test(Break Command)
   @input*
     @block
       a b c
       d e f
     xxx
-  @output*
+  @expected*
     Markright
       BlockCmd(block)
         Paragraph
@@ -333,8 +317,7 @@
 
     @someother
       blis blia
-      @blis-blis
-      blis blis
+      @blis-blis blis blis
       hola
 
     xxx
