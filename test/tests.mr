@@ -15,6 +15,22 @@
         "hi"
         Break
         "ho"
+@parse-test(Several inline commands)
+  @input*
+    @a{123}
+    @b{456}
+    @c{a_a_a_a}
+  @expected*
+    Markright
+      Paragraph
+        InlineCmd(a)
+          "123"
+        Break
+        InlineCmd(b)
+          "456"
+        Break
+        InlineCmd(c)
+          "a_a_a_a"
 @parse-test(Two paragraphs)
   @input*
     hi
