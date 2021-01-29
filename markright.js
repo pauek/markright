@@ -17,13 +17,13 @@ class Markright {
   }
 }
 
-class Break {}
-
 class Paragraph {
-  constructor(content) {
-    this.content = content;
+  constructor(items) {
+    this.content = items;
   }
 }
+
+class Break {}
 
 class Command {
   constructor(name, args) {
@@ -47,6 +47,18 @@ Command.INLINE = "inline";
 
 // Parser
 
+class ParseError extends Error {
+  constructor(lin, col, message) {
+    super(message);
+    this.name = "ParseError";
+    this.lin = lin;
+    this.col = col;
+  }
+  toString() {
+    return `${this.lin}:${this.col}: ${this.name}: ${this.message}`;
+  }
+}
+
 const parse = (input) => {
   let baseIndent = 0;
   let i = 0;
@@ -54,7 +66,7 @@ const parse = (input) => {
   let col = 1;
 
   const error = (msg, _lin, _col) => {
-    throw new ParseError(_lin || lin, _col || col, msg);
+    throw new ParseError(_lin || lin, _col || col, msg);
   };
 
   const atEnd = () => i >= input.length;
@@ -173,7 +185,7 @@ const parse = (input) => {
       advance(1);
     }
     return text;
-  }
+  };
 
   const parseCommandHeader = () => {
     // Command char
@@ -199,6 +211,7 @@ const parse = (input) => {
     let start = i;
     while (input[i] !== ")") {
       advance(1);
+      // TODO: Detect ")" below baseIndent
       if (atEnd()) {
         error(`Found end of text while looking for ')'`);
       }
@@ -245,6 +258,9 @@ const parse = (input) => {
           break;
         }
         if (indentLength() < baseIndent) {
+          if (closeDelim) {
+            error(`Expected to find '${closeDelim}' before indentation break`);
+          }
           break;
         }
         skipIndent();
@@ -356,24 +372,12 @@ const parse = (input) => {
   return new Markright(_parse());
 };
 
-class ParseError extends Error {
-  constructor(lin, col, message) {
-    super(message);
-    this.name = "ParseError";
-    this.lin = lin;
-    this.col = col;
-  }
-  toString() {
-    return `${this.lin}:${this.col}: ${this.name}: ${this.message}`;
-  }
-}
-
 const parseFile = (filename) => {
   const text = fs.readFileSync(filename).toString();
   return parse(text);
 };
 
-// Processor
+// Walker
 
 const rInternal = /^<.*>$/;
 const isInternal = (pathElem) => rInternal.test(pathElem);

@@ -156,7 +156,6 @@ const parseTest = (input, expected) => {
       lineArraysComparison(output, expectedLines)
     );
   } catch (e) {
-    console.error(e);
     return `  ${e}\n`;
   }
 };

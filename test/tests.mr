@@ -98,6 +98,52 @@
           Break
           "bli bla blu"
         " and some more"
+@parse-test(Inline with split args)
+  @input*
+    Some text @cmd(
+      a, b, c
+    ) and some more
+  @expected*
+    Markright
+      Paragraph
+        "Some text "
+        InlineCmd(cmd, ["a", "b", "c"])
+        " and some more"
+@parse-test(Inline with split args)
+  @input*
+    Some text @cmd(
+      a=1, b=22, 
+      c=333
+    ){  with
+    text inside
+    in 3 lines} and some more
+  @expected*
+    Markright
+      Paragraph
+        "Some text "
+        InlineCmd(cmd, ["a=1", "b=22", "c=333"])
+          "  with"
+          Break
+          "text inside"
+          Break
+          "in 3 lines"
+        " and some more"
+@parse-test(Inline with split args)
+  @input*
+    Some text @cmd(a 1, b 2){
+      Some inside...
+      bcd
+    } and then some more
+  @expected*
+    Markright
+      Paragraph
+        "Some text "
+        InlineCmd(cmd, ["a 1", "b 2"])
+          Break
+          "Some inside..."
+          Break
+          "bcd"
+        " and then some more"
 @parse-test(Three inline commands)
   @input*
     @a @b @c
@@ -109,7 +155,7 @@
         InlineCmd(b)
         " "
         InlineCmd(c)
-@parse-test(Indentation in inner text)
+@parse-test(Indentation in inner raw text)
   @input*
     @raw*
       1st
@@ -268,6 +314,13 @@
     some more text
   @expected*
     2:1: ParseError: Block command inside paragraph
+@error-message-test(Wrong closing bracket)
+  @input*
+    @body
+      bla bla @a{inside
+    } xxx
+  @expected*
+    3:1: ParseError: Expected to find '}' before indentation break
 @parse-test(debug 1)
   @input*
     @B(a,b,c)
