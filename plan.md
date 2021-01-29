@@ -1,7 +1,7 @@
 # ADT
 ```
-Markright = List(Paragraph | Command(Markright)) // Vertical
-Paragraph = List(String    | Command(Paragraph)) // Horizontal
+Markright = List(Paragraph | Command(Markright))
+Paragraph = List(String | Break | Command(Paragraph))
 
 Command(T) = {
   name: String
