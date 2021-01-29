@@ -211,7 +211,9 @@ const parse = (input) => {
     let start = i;
     while (input[i] !== ")") {
       advance(1);
-      // TODO: Detect ")" below baseIndent
+      if (col < baseIndent) {
+        error(`Indentation break while looking for ')'`);
+      }
       if (atEnd()) {
         error(`Found end of text while looking for ')'`);
       }
@@ -259,7 +261,7 @@ const parse = (input) => {
         }
         if (indentLength() < baseIndent) {
           if (closeDelim) {
-            error(`Expected to find '${closeDelim}' before indentation break`);
+            error(`Indentation break while looking for '${closeDelim}'`);
           }
           break;
         }

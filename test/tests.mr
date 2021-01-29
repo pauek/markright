@@ -306,6 +306,13 @@
     @cmd(a, b, c
   @expected*
     2:1: ParseError: Found end of text while looking for ')'
+@error-message-test(Indentation break before args)
+  @input*
+    @block
+      @cmd(a, b, c
+    )
+  @expected*
+    3:1: ParseError: Indentation break while looking for ')'
 @error-message-test(Block command in between paragraphs)
   @input*
     some text
@@ -320,7 +327,7 @@
       bla bla @a{inside
     } xxx
   @expected*
-    3:1: ParseError: Expected to find '}' before indentation break
+    3:1: ParseError: Indentation break while looking for '}'
 @parse-test(debug 1)
   @input*
     @B(a,b,c)
