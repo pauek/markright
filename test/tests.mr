@@ -119,6 +119,16 @@
       BlockCmd(cmd)
       Paragraph
         "ho"
+@parse-test(Inline raw command)
+  @input*
+    Bla @code*{hi ho} yay
+  @expected*
+    Markright
+      Paragraph
+        "Bla "
+        InlineCmd(code*)
+          "hi ho"
+        " yay"
 @parse-test(Inline command in its own line)
   @input*
     some text

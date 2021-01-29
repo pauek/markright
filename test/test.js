@@ -1,5 +1,8 @@
 const markright = require("../markright");
 
+const [_, __, ...testsToRun] = process.argv;
+
+const shouldRun = (name) => testsToRun.length === 0 || testsToRun.indexOf(name) !== -1;
 class LineWriter {
   constructor() {
     this.lines = [];
@@ -60,10 +63,11 @@ const lineArraysComparison = (bad, good) => {
   let result = "\n";
   result += "  ";
   result += pad("EXPECTED", szGood + 2, "");
-  result += "    "
+  result += "    ";
   result += pad("OUTPUT", szBad, "");
   result += "\n";
-  result += "  " + "-".repeat(szGood-1) + "       " + "-".repeat(szBad) + "\n";
+  result +=
+    "  " + "-".repeat(szGood - 1) + "       " + "-".repeat(szBad) + "\n";
 
   for (let i = 0; i < maxLines; i++) {
     const show = (array, sz) =>
@@ -71,7 +75,7 @@ const lineArraysComparison = (bad, good) => {
 
     result += "  ";
     result += show(good, szGood);
-    result += (good[i] != bad[i] ? "<>  " : "    ");
+    result += good[i] != bad[i] ? "<>  " : "    ";
     result += show(bad, szBad);
     result += "\n";
   }
@@ -132,6 +136,7 @@ const checkTitleArgument = (cmd) => {
       `@${cmd.name} should have a single argument (the title of the test)`
     );
   }
+  return cmd.args[0];
 };
 
 const splitLines = (str) => {
@@ -151,7 +156,8 @@ const parseTest = (input, expected) => {
       lineArraysComparison(output, expectedLines)
     );
   } catch (e) {
-    return `  ${e.toString()}\n`;
+    console.error(e);
+    return `  ${e}\n`;
   }
 };
 
@@ -166,7 +172,7 @@ const errorMessageTest = (input, expected) => {
       return `  Actual:   "${err}"\n  Expected: "${exp}"\n`;
     }
   }
-}
+};
 
 const addResult = (name, fn) => {
   const errorMessage = fn();
@@ -198,8 +204,8 @@ const getInputAndExpected = (mr) => {
       );
     }
   }
-  return { input, expected };
-}
+  return { input, expected };
+};
 
 const testFuncMap = new markright.FuncMap();
 
@@ -209,48 +215,40 @@ testFuncMap.on("/<markright>", (mr, walk) => {
 });
 
 testFuncMap.on("print-test*", (cmd) => {
-  checkTitleArgument(cmd);
-  const {
-    args: [name],
-    content: expected,
-  } = cmd;
-  const expectedLines = splitLines(expected);
-  const mr = markright.parse(expected);
-  const lineWriter = new LineWriter();
-  markright.print(mr, lineWriter);
-  addResult(
-    name,
-    () =>
-      lineArraysDifferent(lineWriter.lines, expectedLines) &&
-      lineArraysComparison(lineWriter.lines, expectedLines)
-  );
+  const title = checkTitleArgument(cmd);
+  if (shouldRun(title)) {
+    const expected = cmd.content;
+    const expectedLines = splitLines(expected);
+    const mr = markright.parse(expected);
+    const lineWriter = new LineWriter();
+    markright.print(mr, lineWriter);
+    addResult(
+      title,
+      () =>
+        lineArraysDifferent(lineWriter.lines, expectedLines) &&
+        lineArraysComparison(lineWriter.lines, expectedLines)
+    );
+  }
 });
 
 testFuncMap.on("parse-test", (cmd) => {
-  checkTitleArgument(cmd);
-  let { input, expected } = getInputAndExpected(cmd.content);
-  addResult(cmd.args[0], () => parseTest(input, expected));
+  const title = checkTitleArgument(cmd);
+  if (shouldRun(title)) {
+    let { input, expected } = getInputAndExpected(cmd.content);
+    addResult(title, () => parseTest(input, expected));
+  }
 });
 
 testFuncMap.on("error-message-test", (cmd) => {
-  checkTitleArgument(cmd);
-  let { input, expected } = getInputAndExpected(cmd.content);
-  addResult(cmd.args[0], () => errorMessageTest(input, expected));
+  const title = checkTitleArgument(cmd);
+  if (shouldRun(title)) {
+    let { input, expected } = getInputAndExpected(cmd.content);
+    addResult(title, () => errorMessageTest(input, expected));
+  }
 });
 
 testFuncMap.on("disabled", () => {});
 
-try {
-  const tests = markright.parseFile("./test/tests.mr");
-  markright.walk(tests, testFuncMap);
-} catch (e) {
-  switch (e.name) {
-    case "ResolveError": {
-      console.error(e.message);
-      break;
-    }
-    default:
-      console.error(e);
-  }
-}
+const tests = markright.parseFile("./test/tests.mr");
+markright.walk(tests, testFuncMap);
 showErrors();
