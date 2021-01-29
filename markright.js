@@ -2,17 +2,13 @@ const fs = require("fs");
 
 const COMMAND_CHAR = "@";
 
-// Regular Expressions
-const rCommandChar = /[*a-zA-Z0-9_-]/;
-
-// const rEmpty = /^[ \t]*$/;
-// const rCommandHeader = /@([a-zA-Z0-9_-]*\*?)(\(([^),]+(,[^),]+)*)*\))?/;
-// const rBlockCommand = /^@([a-zA-Z0-9_-]*\*?)(\([^),]+(,[^),]+)*\))?\s*$/;
-
 // These are matching tables...
 const OPEN_DELIMS = "[{<";
 const CLOSE_DELIMS = "]}>";
 const getCloseDelim = (c) => CLOSE_DELIMS[OPEN_DELIMS.indexOf(c)];
+
+// Regular Expressions
+const rCommandChar = /[*a-zA-Z0-9_-]/;
 
 // Types
 class Markright {
@@ -24,17 +20,8 @@ class Markright {
 class Break {}
 
 class Paragraph {
-  constructor(content = []) {
+  constructor(content) {
     this.content = content;
-  }
-  append(lineOrCommand) {
-    this.content.push(lineOrCommand);
-  }
-  isEmpty() {
-    return this.content.length === 0;
-  }
-  isSingleCommand() {
-    return this.content.length === 1 && this.content[0] instanceof Command;
   }
 }
 
@@ -56,7 +43,6 @@ class Command {
   }
 }
 Command.BLOCK = "block";
-Command.INPARAGRAPH = "inparagraph";
 Command.INLINE = "inline";
 
 // Parser
@@ -521,7 +507,6 @@ const print = (root, out = new Printer()) => {
         }
         break;
       }
-      case Command.INPARAGRAPH:
       case Command.BLOCK: {
         out.endl();
         out.indented(() => {
@@ -548,8 +533,10 @@ module.exports = {
 
   parse,
   parseFile,
+
   FuncMap,
   walk,
+
   print,
   Printer,
 };
