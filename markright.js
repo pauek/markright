@@ -1,40 +1,27 @@
 const fs = require("fs");
 
-// Regular Expressions
-const rEmpty = /^[ \t]*$/;
-const rIndent = /^( )*/;
-const rCommandHeader = /@([a-zA-Z0-9_-]*\*?)(\(([^),]+(,[^),]+)*)*\))?/;
-const rBlockCommand = /^@([a-zA-Z0-9_-]*\*?)(\([^),]+(,[^),]+)*\))?\s*$/;
+const COMMAND_CHAR = "@";
 
-// Utils
-const isEmpty = (line) => rEmpty.test(line);
-const indentation = (line) => line.match(rIndent)[0].length;
-const isSingleCommand = (line) => rBlockCommand.test(line);
+// Regular Expressions
+const rCommandChar = /[*a-zA-Z0-9_-]/;
+
+// const rEmpty = /^[ \t]*$/;
+// const rCommandHeader = /@([a-zA-Z0-9_-]*\*?)(\(([^),]+(,[^),]+)*)*\))?/;
+// const rBlockCommand = /^@([a-zA-Z0-9_-]*\*?)(\([^),]+(,[^),]+)*\))?\s*$/;
 
 // These are matching tables...
 const OPEN_DELIMS = "[{<";
 const CLOSE_DELIMS = "]}>";
 const getCloseDelim = (c) => CLOSE_DELIMS[OPEN_DELIMS.indexOf(c)];
 
-const getDelimiters = (str) => {
-  const open = str[0];
-  if (OPEN_DELIMS.indexOf(open) === -1) {
-    return null;
-  }
-  let i;
-  for (i = 1; i < str.length; i++) {
-    if (str[i] !== open) break;
-  }
-  return { open, close: getCloseDelim(open), length: i };
-};
-
 // Types
-
 class Markright {
   constructor(blocks) {
     this.content = blocks;
   }
 }
+
+class Break {}
 
 class Paragraph {
   constructor(content = []) {
@@ -51,12 +38,6 @@ class Paragraph {
   }
 }
 
-class Line {
-  constructor(items) {
-    this.content = items;
-  }
-}
-
 class Command {
   constructor(name, args) {
     this.name = name;
@@ -64,15 +45,6 @@ class Command {
   }
   isRaw() {
     return this.name[this.name.length - 1] === "*";
-  }
-  isInline() {
-    return this.type === Command.INLINE;
-  }
-  isBlock() {
-    return this.type === Command.BLOCK;
-  }
-  isInParagraph() {
-    return this.type === Command.INPARAGRAPH;
   }
   get openDelim() {
     const { open, length } = this.delims;
@@ -83,185 +55,297 @@ class Command {
     return close.repeat(length);
   }
 }
-
 Command.BLOCK = "block";
 Command.INPARAGRAPH = "inparagraph";
 Command.INLINE = "inline";
 
 // Parser
 
-const parseCommandHeader = (line) => {
-  const [all, name, _, args] = line.match(rCommandHeader);
-  return {
-    cmd: new Command(name, args ? args.split(",") : null),
-    pos: all.length,
-  };
-};
-
-class ParseError extends Error {
-  constructor(...params) {
-    super(...params);
-    this.name = "ParseError";
-  }
-}
-
-const parse = (lines) => {
-  const blocks = [];
-  let paragraph = null;
+const parse = (input) => {
+  let baseIndent = 0;
   let i = 0;
+  let lin = 1;
+  let col = 1;
 
-  const collectLines = (baseIndentation) => {
-    const result = [];
-    i++;
-    while (i < lines.length) {
-      if (isEmpty(lines[i])) {
-        result.push("");
-      } else {
-        const ind = indentation(lines[i]);
-        if (ind <= baseIndentation) {
-          break;
-        } else if (ind >= baseIndentation + 2) {
-          const cleanLine = lines[i].slice(baseIndentation + 2);
-          result.push(cleanLine);
-        } else {
-          throw new ParseError(`Wrong indentation: ${lines[i]}`);
-        }
-      }
-      i++;
-    }
-    return result;
+  const error = (msg) => {
+    throw new ParseError(lin, col, msg);
   };
 
-  while (i < lines.length) {
-    // a) Empty line?
-    if (isEmpty(lines[i])) {
-      if (paragraph) {
-        blocks.push(paragraph);
-        paragraph = null;
-      }
-      i++;
-      continue;
+  const atEnd = () => i >= input.length;
+
+  const advance = (n) => {
+    i += n;
+    col += n;
+  };
+
+  const nextLine = () => {
+    const endlPos = input.indexOf("\n", i);
+    if (endlPos === -1) {
+      const jump = input.length - i;
+      advance(jump);
+    } else {
+      i = endlPos + 1;
+      lin++;
+      col = 0;
     }
+  };
 
-    // b) Single command (block or inline)
-    if (isSingleCommand(lines[i])) {
-      const { cmd } = parseCommandHeader(lines[i]);
-      const baseIndentation = indentation(lines[i]);
-      const innerLines = collectLines(baseIndentation);
-      if (paragraph) {
-        // b.1) Inline command (open paragraph)
-        cmd.type = Command.INPARAGRAPH;
-        if (cmd.isRaw()) {
-          cmd.content = innerLines;
-        } else {
-          const mr = parse(innerLines);
-          if (mr.content.length > 1) {
-            // FIXME: Pass an argument to parse to check empty lines when they occur??
-            throw new ParseError(
-              `An inparagraph command should have only one block`
-            );
-          }
-          cmd.content = mr;
-        }
-        paragraph.append(cmd);
-      } else {
-        // b.2) Block command (no paragraph)
-        cmd.type = Command.BLOCK;
-        cmd.content = cmd.isRaw() ? innerLines : parse(innerLines);
-        blocks.push(cmd);
-      }
-      continue;
+  const indentLength = () => {
+    if (atEnd()) {
+      return 0;
     }
-
-    // c) Line
-    if (paragraph == null) {
-      paragraph = new Paragraph();
+    let k = 0;
+    while (input[i + k] === " ") {
+      k++;
+      if (i + k >= input.length) break;
     }
-    paragraph.append(parseLine(lines[i]));
+    return k;
+  };
 
-    i++; // next line
-  }
+  const skipIndent = () => {
+    advance(indentLength());
+  };
 
-  // Accumulated lines
-  if (paragraph) {
-    blocks.push(paragraph);
-  }
+  const getDelimiters = () => {
+    const open = input[i];
+    if (OPEN_DELIMS.indexOf(open) === -1) {
+      return null;
+    }
+    let length = 1;
+    while (i + length < input.length && input[i + length] === open) {
+      length++;
+    }
+    return { open, close: getCloseDelim(open), length };
+  };
 
-  return new Markright(blocks);
-};
+  const atEmptyLine = () => {
+    let k = i;
+    while (k < input.length && input[k] === " ") {
+      k++;
+    }
+    return k === input.length || input[k] === "\n";
+  };
 
-const parseLine = (line) => {
-  // FIXME: Implement this using a cursor and by characters
-  //        The logic now based on indexOf for '@' and the 
-  //        closeDelim is a little obfuscated.
+  const at = (str) => {
+    const remaining = input.length - i;
+    if (str.length > remaining) {
+      return false;
+    }
+    for (let k = 0; k < str.length; k++) {
+      if (input[i + k] !== str[k]) return false;
+    }
+    return true;
+  };
 
-  const _parseLine = (closeDelim) => {
-    const items = [];
+  const atCommand = () => input[i] === COMMAND_CHAR;
 
+  const collectRawLines = () => {
+    let lines = "";
     while (true) {
-      if (line.length === 0) {
+      if (atEnd()) {
         break;
       }
-
-      const cmdPos = line.indexOf("@");
-
-      // Close delimiter?
-      if (closeDelim) {
-        const delimPos = line.indexOf(closeDelim);
-        // Check that the closing delimiter is before the command
-        if (delimPos >= 0 && (cmdPos === -1 || delimPos < cmdPos)) {
-          if (delimPos > 0) {
-            items.push(line.slice(0, delimPos));
-          }
-          line = line.slice(delimPos + closeDelim.length);
-          break;
-        }
-      }
-
-      // Command?
-      if (cmdPos >= 0) {
-        if (cmdPos > 0) {
-          items.push(line.slice(0, cmdPos));
-        }
-        line = line.slice(cmdPos);
-
-        // Command
-        const { cmd, pos } = parseCommandHeader(line);
-        line = line.slice(pos);
-        cmd.type = Command.INLINE;
-
-        // Parse delimited text
-        cmd.delims = getDelimiters(line);
-        if (cmd.delims) {
-          line = line.slice(cmd.delims.length);
-          if (cmd.isRaw()) {
-            const closePos = line.indexOf(cmd.delims.close);
-            cmd.content = line.slice(0, closePos);
-            line = line.slice(closePos + cmd.delims.length);
-          } else {
-            cmd.content = _parseLine(cmd.closeDelim);
-          }
-        }
-        items.push(cmd);
+      if (atEmptyLine()) {
+        // Careful with empty lines with lower indent than baseIndent
+        nextLine();
+        lines += "\n";
         continue;
       }
-
-      // Just text left
-      if (line) {
-        items.push(line);
+      if (indentLength() >= baseIndent) {
+        let start = i + baseIndent;
+        nextLine();
+        lines += input.substring(start, i);
+        continue;
       }
       break;
     }
-    return new Line(items);
+    return lines;
   };
 
-  const result = _parseLine();
-  return result;
+  const parseCommandHeader = () => {
+    // Command char
+    if (input[i] !== COMMAND_CHAR) {
+      error(`Assertion failed: expected ${COMMAND_CHAR}`);
+    }
+    advance(1);
+
+    // Command name
+    let name = "";
+    while (rCommandChar.test(input[i])) {
+      name += input[i];
+      advance(1);
+    }
+    // TODO: empty commands? Just a @? How can they be used?
+    /* 
+    if (name === "") {
+      error(`Command doesn't have name`);
+    }
+    */
+
+    // Arguments
+    if (input[i] !== "(") {
+      // No arguments
+      return new Command(name);
+    }
+
+    advance(1); // skip "("
+    let start = i;
+    while (input[i] !== ")") {
+      advance(1);
+      if (atEnd()) {
+        error(`Found end of text while looking for ')'`);
+      }
+    }
+    const args = input
+      .substring(start, i)
+      .split(",")
+      .map((s) => s.trim());
+
+    advance(1);
+    return new Command(name, args);
+  };
+
+  const parseParagraphContent = (startCmd, closeDelim) => {
+    let items = [];
+    if (startCmd) {
+      // There could be content after the command header
+      parseInlineCommandContent(startCmd);
+      items = [startCmd];
+    }
+
+    let text = "";
+    const addText = () => {
+      if (text) {
+        items.push(text);
+        text = "";
+      }
+    };
+    const append = (x) => {
+      addText();
+      items.push(x);
+    };
+
+    while (!atEnd()) {
+      if (input[i] === "\n") {
+        append(new Break());
+        advance(1);
+        if (atEmptyLine()) {
+          if (closeDelim) {
+            error(`Found newline while looking for ${closeDelim}`);
+          }
+          nextLine();
+          break;
+        }
+        if (indentLength() < baseIndent) {
+          break;
+        }
+        skipIndent();
+        continue;
+      }
+      if (closeDelim && at(closeDelim)) {
+        addText();
+        advance(closeDelim.length);
+        break;
+      }
+      if (atCommand()) {
+        const cmd = parseCommandHeader();
+        if (atEmptyLine()) {
+          // Block Command
+        }
+        parseInlineCommandContent(cmd);
+        append(cmd);
+        continue;
+      }
+      // Accumulate text
+      text += input[i];
+      advance(1);
+    }
+
+    // Remove a Break at the end
+    const len = items.length;
+    const last = items[len - 1];
+    if (last instanceof Break) {
+      items.splice(len - 1, 1);
+    }
+
+    return items;
+  };
+
+  const parseInlineCommandContent = (cmd) => {
+    cmd.type = Command.INLINE;
+    const delims = getDelimiters();
+    if (delims) {
+      cmd.delims = delims;
+      advance(delims.length);
+      cmd.content = parseParagraphContent(null, cmd.closeDelim);
+    }
+  };
+
+  const parseBlockCommand = (cmd) => {
+    cmd.type = Command.BLOCK;
+    baseIndent += 2;
+    if (cmd.isRaw()) {
+      cmd.content = collectRawLines();
+    } else {
+      cmd.content = _parse();
+    }
+    baseIndent -= 2;
+    return cmd;
+  };
+
+  const _parse = () => {
+    const blocks = [];
+    while (!atEnd()) {
+      if (atEmptyLine()) {
+        nextLine();
+        continue;
+      }
+      if (indentLength() < baseIndent) {
+        // Check after empty line because the empty line might not have indentation
+        break;
+      }
+      skipIndent();
+      /* ???
+      if (input[i] === " ") {
+        error(`wrong indentation`);
+      } */
+
+      let newBlock;
+      if (atCommand()) {
+        // Either: a) block command or b) paragraph starting with an inline command.
+        const cmd = parseCommandHeader();
+        if (atEmptyLine()) {
+          nextLine();
+          newBlock = parseBlockCommand(cmd);
+        } else {
+          const content = parseParagraphContent(cmd);
+          newBlock = new Paragraph(content);
+        }
+      } else {
+        skipIndent();
+        const content = parseParagraphContent();
+        newBlock = new Paragraph(content);
+      }
+      blocks.push(newBlock);
+    }
+    return blocks.length > 0 ? blocks : null;
+  };
+
+  return new Markright(_parse());
 };
 
+class ParseError extends Error {
+  constructor(lin, col, message) {
+    super(message);
+    this.name = "ParseError";
+    this.lin = lin;
+    this.col = col;
+  }
+}
+
 const parseFile = (filename) => {
-  const lines = fs.readFileSync(filename).toString().split("\n");
-  return parse(lines);
+  const text = fs.readFileSync(filename).toString();
+  return parse(text);
 };
 
 // Processor
@@ -331,7 +415,7 @@ const walk = (root, funcMap) => {
   const currPath = [""];
 
   const _containerDefault = (mr) => mr.content.map(_walk);
-  const _textDefault = (mr) => mr;
+  const _elemDefault = (mr) => mr;
 
   const _walkElem = (mr, name, defaultFunc) => {
     currPath.push(name);
@@ -350,10 +434,10 @@ const walk = (root, funcMap) => {
         return _walkElem(mr, "<markright>", _containerDefault);
       case Paragraph:
         return _walkElem(mr, "<paragraph>", _containerDefault);
-      case Line:
-        return _walkElem(mr, "<line>", _containerDefault);
+      case Break:
+        return _walkElem(mr, "<break>", _elemDefault);
       case String:
-        return _walkElem(mr, "<text>", _textDefault);
+        return _walkElem(mr, "<text>", _elemDefault);
       case Command: {
         currPath.push(mr.name);
         const walkFunc = funcMap.get(currPath);
@@ -405,25 +489,25 @@ class Printer {
 const print = (root, out = new Printer()) => {
   const pr = new FuncMap();
 
-  pr.on("<markright>", (M, process) => {
+  pr.on("<markright>", (M, walk) => {
     for (let i = 0; i < M.content.length; i++) {
       if (i > 0) out.endl();
-      process(M.content[i]);
+      walk(M.content[i]);
     }
   });
 
-  pr.on("<paragraph>", (P, process) => {
+  pr.on("<paragraph>", (P, walk) => {
     for (let i = 0; i < P.content.length; i++) {
-      process(P.content[i]);
-      if (P.content[i] instanceof Line) out.endl();
+      walk(P.content[i]);
     }
+    out.endl();
   });
 
-  // <line> can use the default processor
+  pr.on("<break>", () => out.endl());
 
   pr.on("<text>", (text) => out.write(text));
 
-  pr.on("*", (cmd, process) => {
+  pr.on("*", (cmd, walk) => {
     out.write(`@${cmd.name}`);
     if (cmd.args) {
       out.write(`(${cmd.args.join(",")})`);
@@ -432,7 +516,7 @@ const print = (root, out = new Printer()) => {
       case Command.INLINE: {
         if (cmd.content) {
           out.write(`${cmd.openDelim}`);
-          process(cmd.content);
+          cmd.content.forEach(walk);
           out.write(`${cmd.closeDelim}`);
         }
         break;
@@ -441,7 +525,12 @@ const print = (root, out = new Printer()) => {
       case Command.BLOCK: {
         out.endl();
         out.indented(() => {
-          process(cmd.content);
+          if (cmd.content) {
+            for (let i = 0; i < cmd.content.length; i++) {
+              if (i > 0) out.endl();
+              walk(cmd.content[i]);
+            }
+          }
         });
         break;
       }
@@ -454,11 +543,10 @@ const print = (root, out = new Printer()) => {
 module.exports = {
   Markright,
   Paragraph,
-  Line,
   Command,
+  Break,
 
   parse,
-  parseLine,
   parseFile,
   FuncMap,
   walk,

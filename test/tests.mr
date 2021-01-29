@@ -1,64 +1,20 @@
-@print-test*(1)
-  @a{hola @d{que @e<x> @ hi ho} tal} fiu fiu
-  hola que tal @a{} @b @c(1, 2, 3)<<ddd>>
-
-  @B(a,b,c)
-    line1 @
-    line2
-    line3
-
-    skdj
-      asdfasdf
-
-    @C(bla,bli,blo)
-      23874
-      2834782734
-      827482734
-
-    @d @e @f
-
-  Esse veniam magna in aute aute. Est officia labore culpa esse adipisicing
-  excepteur sunt officia deserunt sint amet sit sit ex. Mollit sit est sint duis.
-  Ut consectetur dolore incididunt do aute proident deserunt laboris aute amet.
-  Cupidatat labore sint incididunt labore occaecat reprehenderit proident aliqua.
-
-  blis blias blus
-  @xxx
-    a
-    b
-    c
-  jor jor
-
-  @a{2} @b{{3}} @c{{{asdf}}} bli sblis
-  @command
-    fip 
-    fliap
-    @someother
-      blis blia
-      @blis-blis
-        blis blis
-        hola
-    xxx
-  more text
 @parse-test(Hi)
   @input*
     hi
   @output*
     Markright
       Paragraph
-        Line
-          "hi"
-@parse-test(Two lines)
+        "hi"
+@parse-test(A break)
   @input*
     hi
     ho
   @output*
     Markright
       Paragraph
-        Line
-          "hi"
-        Line
-          "ho"
+        "hi"
+        Break
+        "ho"
 @parse-test(Two paragraphs)
   @input*
     hi
@@ -67,11 +23,88 @@
   @output*
     Markright
       Paragraph
-        Line
-          "hi"
+        "hi"
       Paragraph
-        Line
-          "ho"
+        "ho"
+@parse-test(Inline command)
+  @input*
+    a @b c
+  @output*
+    Markright
+      Paragraph
+        "a "
+        InlineCmd(b)
+        " c"
+@parse-test(Block command)
+  @input*
+    @cmd(a, b, c)
+      text content
+  @output*
+    Markright
+      BlockCmd(cmd, ["a", "b", "c"])
+        Paragraph
+          "text content"
+@parse-test(Empty Command)
+  @input*
+    Some text @ and @ two empty inline commands
+  @output*
+    Markright
+      Paragraph
+        "Some text "
+        InlineCmd()
+        " and "
+        InlineCmd()
+        " two empty inline commands"
+@parse-test(Nested Delimiter)
+  @input*
+    @A{b @c{d} e}
+  @output*
+    Markright
+      Paragraph
+        InlineCmd(A)
+          "b "
+          InlineCmd(c)
+            "d"
+          " e"
+@parse-test(Inline split into different lines)
+  @input*
+    Some text @cmd(1, 2, 3){The inside
+    of this command is longer than usual
+    bli bla blu} and some more
+  @output*
+    Markright
+      Paragraph
+        "Some text "
+        InlineCmd(cmd, ["1", "2", "3"])
+          "The inside"
+          Break
+          "of this command is longer than usual"
+          Break
+          "bli bla blu"
+        " and some more"
+@parse-test(Three inline commands)
+  @input*
+    @a @b @c
+  @output*
+    Markright
+      Paragraph
+        InlineCmd(a)
+        " "
+        InlineCmd(b)
+        " "
+        InlineCmd(c)
+@parse-test(Indentation in inner text)
+  @input*
+    @raw*
+      1st
+        2nd
+      3rd
+  @output*
+    Markright
+      BlockCmd(raw*)
+        "1st"
+        "  2nd"
+        "3rd"
 @parse-test(Paragraph Command Paragraph)
   @input*
     hi
@@ -82,64 +115,24 @@
   @output*
     Markright
       Paragraph
-        Line
-          "hi"
-      Cmd(cmd)
-        Markright
+        "hi"
+      BlockCmd(cmd)
       Paragraph
-        Line
-          "ho"
-@parse-test(Inline command)
-  @input*
-    a @b c
-  @output*
-    Markright
-      Paragraph
-        Line
-          "a "
-          Cmd(b)
-          " c"
-@parse-test(Three inline commands)
-  @input*
-    @a @b @c
-  @output*
-    Markright
-      Paragraph
-        Line
-          Cmd(a)
-          " "
-          Cmd(b)
-          " "
-          Cmd(c)
-@parse-test(Block command)
-  @input*
-    @cmd(a, b, c)
-      text content
-  @output*
-    Markright
-      Cmd(cmd, ["a", " b", " c"])
-        Markright
-          Paragraph
-            Line
-              "text content"
-@parse-test(Inparagraph command)
+        "ho"
+@parse-test(Inline command in its own line)
   @input*
     some text
-    @somecmd(a)
-      inside text
+    @somecmd(a){inside text}
     some more text
   @output*
     Markright
       Paragraph
-        Line
-          "some text"
-        Cmd(somecmd, ["a"])
-          Markright
-            Paragraph
-              Line
-                "inside text"
-        Line
-          "some more text"
+        "some text"
+        Break
+        InlineCmd(somecmd, ["a"])
+          "inside text"
+        Break
+        "some more text"
 @parse-test(More complex paragraph)
   @input*
     a @b c
@@ -147,35 +140,29 @@
   @output*
     Markright
       Paragraph
-        Line
-          "a "
-          Cmd(b)
-          " c"
-        Line
-          Cmd(d)
-            Line
-              "e"
-          " "
-          Cmd(f, ["g"])
+        "a "
+        InlineCmd(b)
+        " c"
+        Break
+        InlineCmd(d)
+          "e"
+        " "
+        InlineCmd(f, ["g"])
 @parse-test(More complex line)
   @input*
     Some line @strong[with @em{many @code<new>} commands] inside
   @output*
     Markright
       Paragraph
-        Line
-          "Some line "
-          Cmd(strong)
-            Line
-              "with "
-              Cmd(em)
-                Line
-                  "many "
-                  Cmd(code)
-                    Line
-                      "new"
-              " commands"
-          " inside"
+        "Some line "
+        InlineCmd(strong)
+          "with "
+          InlineCmd(em)
+            "many "
+            InlineCmd(code)
+              "new"
+          " commands"
+        " inside"
 @parse-test(Empty lines)
   @input*
 
@@ -184,55 +171,23 @@
       Yay
   @output*
     Markright
-      Cmd(something)
-        Markright
-          Paragraph
-            Line
-              "Yay"
-@parse-test(Indentation in inner text)
-  @input*
-    @raw*
-      1st
-        2nd
-      3rd
-  @output*
-    Markright
-      Cmd(raw*)
-        "1st"
-        "  2nd"
-        "3rd"
-@parse-test(Nested Delimiter)
-  @input*
-    @A{b @c{d} e}
-  @output*
-    Markright
-      Paragraph
-        Line
-          Cmd(A)
-            Line
-              "b "
-              Cmd(c)
-                Line
-                  "d"
-              " e"
+      BlockCmd(something)
+        Paragraph
+          "Yay"
 @parse-test(Nested Delimiter 2)
   @input*
     @a{b @c{d @e{f} g} h}
   @output*
     Markright
       Paragraph
-        Line
-          Cmd(a)
-            Line
-              "b "
-              Cmd(c)
-                Line
-                  "d "
-                  Cmd(e)
-                    Line
-                      "f"
-                  " g"
-              " h"
+        InlineCmd(a)
+          "b "
+          InlineCmd(c)
+            "d "
+            InlineCmd(e)
+              "f"
+            " g"
+          " h"
 @parse-test(Different delimiters 2)
   @input*
     @a<A>@b<<B>>@c<<<C>>>@d<<<<D>>>>
@@ -241,42 +196,147 @@
   @output*
     Markright
       Paragraph
-        Line
-          Cmd(a)
-            Line
-              "A"
-          Cmd(b)
-            Line
-              "B"
-          Cmd(c)
-            Line
-              "C"
-          Cmd(d)
-            Line
-              "D"
-        Line
-          Cmd(e)
-            Line
-              "E"
-          Cmd(f)
-            Line
-              "F"
-          Cmd(g)
-            Line
-              "G"
-          Cmd(h)
-            Line
-              "H"
-        Line
-          Cmd(i)
-            Line
-              "I"
-          Cmd(j)
-            Line
-              "J"
-          Cmd(k)
-            Line
-              "K"
-          Cmd(l)
-            Line
-              "L"
+        InlineCmd(a)
+          "A"
+        InlineCmd(b)
+          "B"
+        InlineCmd(c)
+          "C"
+        InlineCmd(d)
+          "D"
+        Break
+        InlineCmd(e)
+          "E"
+        InlineCmd(f)
+          "F"
+        InlineCmd(g)
+          "G"
+        InlineCmd(h)
+          "H"
+        Break
+        InlineCmd(i)
+          "I"
+        InlineCmd(j)
+          "J"
+        InlineCmd(k)
+          "K"
+        InlineCmd(l)
+          "L"
+@error-message-test(Wrong indentation)
+  @input*
+    @cmd1
+        @inline1 a b c
+      and more text
+  @output*
+    2:5: Parse Error: Wrong indentation
+@error-message-test(Unfinished args)
+  @input*
+    @cmd(a, b, c
+  @output*
+    1:13: Parse Error: Found end of text while looking for ')'
+@error-message-test(Block command in between paragraphs)
+  @input*
+    some text
+    @somecmd(a)
+      inside text
+    some more text
+  @output*
+    2:1: Parse Error: Block command inside a paragraph
+@parse-test(debug 1)
+  @input*
+    @B(a,b,c)
+      line1 @
+      line2
+      line3
+  @output*
+    Markright
+      BlockCmd(B, ["a", "b", "c"])
+        Paragraph
+          "line1 "
+          InlineCmd()
+          Break
+          "line2"
+          Break
+          "line3"
+@parse-test(debug 2)
+  @input*
+    bla bla
+    @xxx
+      1
+    bli bli
+  @output*
+    Markright
+      Paragraph
+        "bla bla"
+        Break
+        InlineCmd(xxx)
+        Break
+        "1"
+        Break
+        "bli bli"
+@parse-test(Break Command)
+  @input*
+    @block
+      a b c
+      d e f
+    xxx
+  @output*
+    Markright
+      BlockCmd(block)
+        Paragraph
+          "a b c"
+          Break
+          "d e f"
+      Paragraph
+        "xxx"
+@print-test*(Print test 1)
+  @a{hola @d{que @e<x> @ hi ho} tal} fiu fiu
+  hola que tal @a{} @b @c(1,2,3)<<ddd>>
+
+  @B(a,b,c)
+    line1 @
+    line2
+    line3
+
+    skdj 
+    asdfasdf
+
+    @C(bla,bli,blo)
+      23874
+      2834782734
+      827482734
+
+    @d @e @f
+
+  Esse veniam magna in aute aute. Est 
+  officia labore culpa esse adipisicing 
+  excepteur sunt officia deserunt sint 
+  amet sit sit ex. Mollit sit est sint 
+  duis. Ut consectetur dolore incididunt 
+  do aute proident deserunt laboris 
+  aute amet.
+
+  blis blias blus
+
+  @xxx
+    a
+    b
+    c
+
+  jor jor
+
+  @a{2} @b{{3}} @c{{{asdf}}} bli sblis
+
+  @command
+    fip 
+    fliap
+
+    @someother
+      blis blia
+      @blis-blis
+      blis blis
+      hola
+
+    xxx
+
+  more text
