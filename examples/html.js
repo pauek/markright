@@ -15,11 +15,11 @@ html.on("<text>", (text) => out.write(text));
 html.on("*", ({ name, args, type, content }, walk) => {
   if (type === "inline") {
     out.write(`<${name}${args ? " " + args.join(" ") : ""}>`);
-    walk(content);
+    content.forEach(walk);
     out.write(`</${name}>`);
   } else {
     out.writeln(`<${name}${args ? " " + args.join(" ") : ""}>`);
-    out.indented(() => walk(content));
+    out.indented(() => content.forEach(walk));
     out.write(`</${name}>`);
     if (type === "block") {
       out.endl();
@@ -29,4 +29,8 @@ html.on("*", ({ name, args, type, content }, walk) => {
 
 html.on("", () => out.write("<br>"));
 
-mr.walk(mr.parseFile("html.mr"), html);
+try {
+  mr.walk(mr.parseFile("html.mr"), html);
+} catch (e) {
+  console.log(e.toString());
+}
